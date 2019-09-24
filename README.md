@@ -1,5 +1,5 @@
 # YAGFES
-<em>YAGFES</em>, o <em>Yet Another Groundwater Flow Equation Solver</em>, es un paquete desarrollado en Python 3 que asiste al usuario con la elaboración de modelos computacionales de flujo de agua en medios porosos bidimensionales para el cálculo de distribuciones de <em>carga hidráulica</em>, <em>velocidades de Darcy</em> y de <em>conos de abatimiento</em> con la presencia de pozos. <em>YAGFES</em> se desarrollo como una herramienta libre, de código abierto y gratuito. Al tratarse de un paquete desarrollado en Python 3, <em>YAGFES</em> puede ser empleado en diferentes sistemas operativos sin mayores complicaciones.
+<em>YAGFES</em>, o <em>Yet Another Groundwater Flow Equation Solver</em>, es un paquete desarrollado en Python 3 que asiste al usuario con la elaboración de modelos computacionales de flujo de agua en medios porosos bidimensionales para el cálculo de distribuciones de <em>carga hidráulica</em>, <em>velocidades de Darcy</em> y de <em>conos de abatimiento</em>. <em>YAGFES</em> se desarrollo como una herramienta libre, de código abierto y gratuito. Al tratarse de un paquete desarrollado en Python 3, <em>YAGFES</em> puede ser empleado en diferentes sistemas operativos sin mayores complicaciones.
 
 <em>YAGFES</em> está diseñado para resolver la ecuación de flujo en un medio poroso bidimensional con las siguientes consideraciones:
 <ol>
