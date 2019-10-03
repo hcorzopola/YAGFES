@@ -1,1 +1,2 @@
-Hola :)
+# Instalación
+Para instalar el paquete YAGFES...
