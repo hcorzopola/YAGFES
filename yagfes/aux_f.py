@@ -200,9 +200,8 @@ def read_dict(file):
     content=dict()
     ###########################################################################
     for __line in __f:
-        __line.rstrip('\n') #Read line and remove 'new line' command.
-        if __line[0]!='#':
-            __aline=__line.split('=') #Split line @ '='
+        if __line[0]!='#' and __line.rstrip('\n')!='':
+            __aline=__line.rstrip('\n').split('=') #Remove 'new line' character and split line @ '='
             content[__aline[0]]=ast.literal_eval(__aline[1])
     __f.close()
     return content
