@@ -54,21 +54,15 @@ class mesh:
             __f.readline() #Skip 4 lines
         ###Read number of nodes################################################
         self.n_n=int(__f.readline().rstrip('\n')) #Read number of nodes.
-        #'rstrip('\n')' removes the 'new line' command at the end of the line.
-        #'int()' converts the string to a number.
         #######################################################################
         ###Create an array ('Point Matrix') for storing the node coordinates###
-        self.m_p=[0]*self.n_n
-        for i in range(self.n_n):
-            self.m_p[i]=[0]*3
-        #The 'Point Matrix' has dimensions of 'n_n x 3'. This allow us to store
-        # up to three coordinates per node.
+        self.m_p=[] #The 'Point Matrix' has dimensions of 'n_n x 3'.
+        #This allow us to store up to three coordinates per node.
         #######################################################################
         ###Retrieve node coordinates from the mesh file########################
         for i in range(self.n_n):
-            __aux_n=__f.readline().split() #Store the line in an auxiliar array
-            for j in range(3):
-                self.m_p[i][j]=float(__aux_n[j+1]) #Store coordinates in the 'Point Matrix'
+            __aux_n=__f.readline().split()[1:] #Store the line in an auxiliar array. Skip node number.
+            self.m_p.append([float(x) for x in __aux_n])
         #######################################################################
         ##READ NODES INFO######################################################
         
@@ -77,10 +71,8 @@ class mesh:
             __f.readline() #Skip 2 lines
         ###Read number of elements#############################################
         self.n_e=int(__f.readline().rstrip('\n')) #Read number of elements.
-        #'rstrip('\n')' removes the 'new line' command at the end of the line.
-        #'int()' converts the string to a number.
         #This number accounts for two-node elements. We will update this later,
-        # since the final number of elements might not be the same.
+        #since the final number of elements might not be the same.
         #######################################################################
         ###Create an array ('Connectivity Matrix') for storing the nodes per element
         self.m_c=list()
@@ -98,18 +90,10 @@ class mesh:
         ###Retrieve elements from the mesh file################################
         for i in range(self.n_e):
             __aux_e=__f.readline().split() #Store the line in an auxiliar array
-            if __aux_e[1]=='1':
-                #Store in 'bc'
-                self.bc.append( list( map(int,__aux_e[3:]) ) )
-                #'map()' applies the 'int()' function to the whole array 
-                # '__aux_e[3:]'. 'list()' just formats the 'map()' output to
-                # a list.
-            else:
-                #Store in 'm_c'
-                self.m_c.append( list( map(int,__aux_e[5:]) ) )
-                #'map()' applies the 'int()' function to the whole array 
-                # '__aux_e[5:]'. 'list()' just formats the 'map()' output to
-                # a list
+            if __aux_e[1]=='1': #Linear elements
+                self.bc.append( list( map(int,__aux_e[3:]) ) ) #Store element in 'bc'
+            else: #Triangular elements
+                self.m_c.append( list( map(int,__aux_e[5:]) ) ) #Store element in 'm_c'
         ###Fix node index######################################################
         for i in range(len(self.m_c)):
             for j in range(3):
@@ -409,10 +393,10 @@ class phymed:
         if self.steady==False: #Check steady-state flag
             ###TEMPORAL AXIS FOR NODE PROPERTIES
             for i in range(n_n):
-                self.q[i]=[0]*self.time_steps
+                self.q[i]=[0]*2 #To store 'previous' and 'current' states
             #############################
-            self.hh_n=[0]*self.time_steps
-            for i in range(self.time_steps):
+            self.hh_n=[0]*2 #To store 'previous' and 'current' states
+            for i in range(2):
                 self.hh_n[i]=[0]*n_n
         #######################################################################
         #INITIALIZE ALL THE ARRAYS USED FOR STORING BOUNDARY CONDITIONS########
