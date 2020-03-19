@@ -60,7 +60,7 @@ unit_dict={'mm':1000,'cm':100,'dm':10,'m':1,'dam':0.1,'hm':0.01,'km':0.001,\
 """
 
 #PLOT HYDRAULIC HEAD DISTRIBUTION##############################################
-def plot_hh(model,npts=21,superpose=False,step=None,lang='en'):
+def plot_h(model,npts=21,superpose=False,step=None,lang='en'):
     """
     model = 'fem' or 'fdm' object
     npts = # of interpolation points
@@ -193,7 +193,7 @@ def plot_drawdown(files:list,lang='en'):
 ################################MISC FUNCTIONS#################################
 """
 #DICTIONARY-LIKE FILE READING##################################################
-def read_dict(file):    
+def readDict(file):    
     #READ FILE AS IF IT WERE A PYTHON DICTIONARY###############################
     __f=open(path+'/'+file,'r') #Open the given file in 'read' mode
     ##CREATE A DICTIONARY TO STORE THE FILE INFO###############################

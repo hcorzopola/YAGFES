@@ -120,7 +120,7 @@ class mesh:
                     (a[1]*b[2]-a[2]*b[1])**2)**0.5
         #CALCULATE ELEMENT AREA################################################
         
-    def write_bc_file(self,file):
+    def writeBCfile(self,file):
         #WRITE A BC FILE BASED ON MESH INFO####################################
         __f=open(aux_f.path+'/'+file,'w') #Open the given file in 'write' mode
         __nbc=len(self.bc)
@@ -256,7 +256,7 @@ class mesh:
                     __file=input('Please input the pumping schedule file of the well at line '+\
                               str(self.bc[i][1])+'.\n') #Read well's pumping/ rate
                     ##RETRIEVE WELL INFORMATION FROM FILE######################
-                    __f2=aux_f.read_dict(__file)
+                    __f2=aux_f.readDict(__file)
                     __lineV.append(__f2['rate'])
                     __well.append(__file)
                     ##RETRIEVE WELL INFORMATION FROM FILE######################
@@ -418,7 +418,7 @@ class phymed:
         del __elements,n_n,n_e,config
         
     #READ BOUNDARY CONDITIONS##################################################
-    def read_bc_file(self,file):
+    def readBCfile(self,file):
         #READ BC FILE##########################################################
         __f=open(aux_f.path+'/'+file) #Open the given file in 'read' mode
         
@@ -466,7 +466,7 @@ class phymed:
     #READ BOUNDARY CONDITIONS##################################################
         
     #READ INITIAL CONDITIONS###################################################
-    def read_hh0(self,file):
+    def read_h0(self,file):
         #READS AN HHD FILE AND ASSIGNS IT TO HH_0##############################
         __f=open(aux_f.path+'/'+file)
         
@@ -495,7 +495,7 @@ class fem:
     def __init__(self,init):
         self.type='FEM'
         #READ INIT FILE########################################################
-        self.config=aux_f.read_dict(init)
+        self.config=aux_f.readDict(init)
         #READ INIT FILE########################################################
         #CREATE MESH AND PHYMED OBJECTS########################################
         self.mesh=mesh(self.config['mesh_file'])
@@ -512,7 +512,7 @@ class fem:
 #####ASSEMBLE MATRICES AND VECTORS#############################################
 ###############################################################################
     ##ASSEMBLE MASS MATRIX#####################################################
-    def mass_m_assembly(self):
+    def __assembleMassMatrix(self):
         #INITIALIZE ARRAY FOR MASS MATRIX
         self.m_mass=[0]*self.mesh.n_n
         for i in range(self.mesh.n_n):
@@ -526,13 +526,13 @@ class fem:
                         __lmm_ij=self.mesh.a_e[k]*self.phymed.ss_e[k]/6
                     else:
                         __lmm_ij=self.mesh.a_e[k]*self.phymed.ss_e[k]/12
-                    (global_i,global_j)=self.local2global(k,i,j)
+                    (global_i,global_j)=self.__local2global(k,i,j)
                     self.m_mass[global_i][global_j]+=__lmm_ij #Add to Global Mass Matrix
             ###################################################################
     ##ASSEMBLE MASS MATRIX#####################################################
     
     ##ASSEMBLE STIFFNESS MATRIX################################################
-    def stiff_m_assembly(self):
+    def __assembleStiffnessMatrix(self):
         #INITIALIZE ARRAY FOR STIFFNESS MATRIX
         self.m_stiffness=[0]*self.mesh.n_n
         for i in range(self.mesh.n_n):
@@ -547,13 +547,13 @@ class fem:
                 for j in range(3): #Local Element Stiffness Matrix Index 'j'
                     __lsm_ij=(self.phymed.k_e[k][0]*(__b[i]*__b[j])+\
                     self.phymed.k_e[k][1]*(__c[i]*__c[j]))*self.mesh.a_e[k]
-                    (global_i,global_j)=self.local2global(k,i,j)
+                    (global_i,global_j)=self.__local2global(k,i,j)
                     self.m_stiffness[global_i][global_j]+=__lsm_ij #Add to Global Stiffness Matrix
             ###################################################################
     ##ASSEMBLE STIFFNESS MATRIX################################################
     
     ##ASSEMBLE LOAD VECTOR#####################################################
-    def load_v_assembly(self):
+    def __assembleLoadVector(self):
         #Steady-state##########################################################
         if self.phymed.steady==True:
             #INITIALIZE ARRAY FOR LOAD VECTOR
@@ -581,7 +581,7 @@ class fem:
     ###########################################################################
     
     ##LOCAL2GLOBAL#############################################################
-    def local2global(self,k,i,j):
+    def __local2global(self,k,i,j):
         #'k'=element index, 'i'=local element index i, 'j'=local element index j
         global_i=self.mesh.m_c[k][i]
         global_j=self.mesh.m_c[k][j]
@@ -617,7 +617,7 @@ class fem:
 #####APPLY BOUNDARY CONDITIONS#################################################
 ###############################################################################
     ##APPLY DIRICHLET BC's#####################################################
-    def apply_bc_d(self):
+    def __applyDirichletBC(self):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
@@ -672,7 +672,7 @@ class fem:
     ##APPLY DIRICHLET BC's#####################################################
     
     ##APPLY NEUMANN BC's#######################################################
-    def apply_bc_n(self):
+    def __applyNeumannBC(self):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
@@ -698,7 +698,7 @@ class fem:
     ##APPLY NEUMANN BC's#######################################################
     
     ##REBUILD HH ARRAY#########################################################
-    def rebuild_hh(self):
+    def __rebuild_h(self):
         #UNIT CONVERSION#######################################################
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
             uF=aux_f.unit_dict[self.config['head'].lower()]/aux_f.unit_dict[self.config['length'].lower()] #Get conversion factor
@@ -725,80 +725,14 @@ class fem:
 #####MODIFY PHYSICAL MEDIUM####################################################
 ###############################################################################
     ##ADD WELLS################################################################
-    def add_well(self,file): #Add well as constant function over an element
+    def addWell(self,file): #Add well as point source over an element
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
             uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
         #UNIT CONVERSION#######################################################
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
-        __f=aux_f.read_dict(file)
-        ##RETRIEVE WELL INFORMATION FROM FILE##################################
-        __element=self.mesh.coord2element(__f['x'],__f['y'])
-        ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
-        if self.phymed.steady==True: #Steady-state
-            for i in range(3):
-                self.phymed.q[self.mesh.m_c[__element][i]]=-__f['rate']*uF/\
-                (3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
-        else: #Transient-state
-            __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
-            for i in range(__n):
-                #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
-                #IDENTIFY 'k_min'
-                for k in range(self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][0]:
-                        t_min=k
-                        break
-                #IDENTIFY 'k_max'
-                for k in range(t_min,self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][1]:
-                        t_max=k+1
-                        break
-                for j in range(3):
-                    for k in range(t_min,t_max):
-                        self.phymed.q[self.mesh.m_c[__element][j]][k]=-__f['rate'][i][2]*uF/(3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
-                        
-    def add_well2(self,file): #Add well as a point source over a node
-        #UNIT CONVERSION#######################################################
-        uF=1
-        if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
-            uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
-        #UNIT CONVERSION#######################################################
-        ##RETRIEVE WELL INFORMATION FROM FILE##################################
-        __f=aux_f.read_dict(file)
-        ##RETRIEVE WELL INFORMATION FROM FILE##################################
-        __node=self.mesh.coord2node(__f['x'],__f['y'])
-        ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
-        if self.phymed.steady==True: #Steady-state
-            for i in range(3):
-                self.phymed.q[__node]=-__f['rate']*uF/\
-                (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
-        else: #Transient-state
-            __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
-            for i in range(__n):
-                #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
-                #IDENTIFY 'k_min'
-                for k in range(self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][0]:
-                        t_min=k
-                        break
-                #IDENTIFY 'k_max'
-                for k in range(t_min,self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][1]:
-                        t_max=k+1
-                        break
-                for j in range(3):
-                    for k in range(t_min,t_max):
-                        self.phymed.q[__node][k]=-__f['rate'][i][2]*uF/(self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
-                        
-    def add_well3(self,file): #Add well as point source over an element
-        #UNIT CONVERSION#######################################################
-        uF=1
-        if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
-            uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
-        #UNIT CONVERSION#######################################################
-        ##RETRIEVE WELL INFORMATION FROM FILE##################################
-        __f=aux_f.read_dict(file)
+        __f=aux_f.readDict(file)
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
         __element=self.mesh.coord2element(__f['x'],__f['y'])
         #Retrieve nodes for interpolation
@@ -841,8 +775,74 @@ class fem:
                     for k in range(t_min,t_max):
                         self.phymed.q[self.mesh.m_c[__element][j]][k]=-__f['rate'][i][2]*__N[j]*uF/\
                         (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+
+    def addWell_onElement(self,file): #Add well as constant function over an element
+        #UNIT CONVERSION#######################################################
+        uF=1
+        if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
+            uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
+        #UNIT CONVERSION#######################################################
+        ##RETRIEVE WELL INFORMATION FROM FILE##################################
+        __f=aux_f.readDict(file)
+        ##RETRIEVE WELL INFORMATION FROM FILE##################################
+        __element=self.mesh.coord2element(__f['x'],__f['y'])
+        ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
+        if self.phymed.steady==True: #Steady-state
+            for i in range(3):
+                self.phymed.q[self.mesh.m_c[__element][i]]=-__f['rate']*uF/\
+                (3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+        else: #Transient-state
+            __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
+            for i in range(__n):
+                #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
+                #IDENTIFY 'k_min'
+                for k in range(self.phymed.time_steps):
+                    if k*self.phymed.dt>=__f['rate'][i][0]:
+                        t_min=k
+                        break
+                #IDENTIFY 'k_max'
+                for k in range(t_min,self.phymed.time_steps):
+                    if k*self.phymed.dt>=__f['rate'][i][1]:
+                        t_max=k+1
+                        break
+                for j in range(3):
+                    for k in range(t_min,t_max):
+                        self.phymed.q[self.mesh.m_c[__element][j]][k]=-__f['rate'][i][2]*uF/(3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                        
+    def addWell_onNode(self,file): #Add well as a point source over a node
+        #UNIT CONVERSION#######################################################
+        uF=1
+        if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
+            uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
+        #UNIT CONVERSION#######################################################
+        ##RETRIEVE WELL INFORMATION FROM FILE##################################
+        __f=aux_f.readDict(file)
+        ##RETRIEVE WELL INFORMATION FROM FILE##################################
+        __node=self.mesh.coord2node(__f['x'],__f['y'])
+        ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
+        if self.phymed.steady==True: #Steady-state
+            for i in range(3):
+                self.phymed.q[__node]=-__f['rate']*uF/\
+                (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+        else: #Transient-state
+            __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
+            for i in range(__n):
+                #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
+                #IDENTIFY 'k_min'
+                for k in range(self.phymed.time_steps):
+                    if k*self.phymed.dt>=__f['rate'][i][0]:
+                        t_min=k
+                        break
+                #IDENTIFY 'k_max'
+                for k in range(t_min,self.phymed.time_steps):
+                    if k*self.phymed.dt>=__f['rate'][i][1]:
+                        t_max=k+1
+                        break
+                for j in range(3):
+                    for k in range(t_min,t_max):
+                        self.phymed.q[__node][k]=-__f['rate'][i][2]*uF/(self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
     
-    def add_well_asnbc(self):
+    def addWell_asnbc(self):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
@@ -879,7 +879,7 @@ class fem:
     
     #ZONE RELATED FUNCTIONS####################################################
     ##DEFINE NEW ZONE##########################################################
-    def new_zone(self,zone_id,Ss:float,Kx:float,Ky:float,x_min:float,x_max:float,y_min:float,y_max:float): #Defines a new zone in the domain as a rectangle
+    def newZone(self,zone_id,Ss:float,Kx:float,Ky:float,x_min:float,x_max:float,y_min:float,y_max:float): #Defines a new zone in the domain as a rectangle
         if zone_id not in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             #IDENTIFY ALL ELEMENTS INSIDE THE ZONE#############################
             __ID=list() #Auxiliar list for storing the ID values of the elements inside the zone
@@ -915,7 +915,7 @@ class fem:
     ##DEFINE NEW ZONE##########################################################
     
     ##APPEND NEW RECTANGLE TO EXISTING ZONE####################################
-    def expand_zone(self,zone_id,x_min:float,x_max:float,y_min:float,y_max:float): #Adds a new rectangle to an existing zone
+    def expandZone(self,zone_id,x_min:float,x_max:float,y_min:float,y_max:float): #Adds a new rectangle to an existing zone
         if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             #IDENTIFY ALL ELEMENTS INSIDE THE ZONE#############################
             __ID=list() #Auxiliar list for storing the ID values of the elements inside the zone
@@ -940,7 +940,7 @@ class fem:
                 #Add elements to zone
                 if i not in self.phymed.zones[zone_id]['elements']:
                     self.phymed.zones[zone_id]['elements'].append(i)
-            self.update_zone(zone_id,self.phymed.zones[zone_id]['Ss'],self.phymed.zones[zone_id]['Kx'],self.phymed.zones[zone_id]['Ky'])
+            self.updateZone(zone_id,self.phymed.zones[zone_id]['Ss'],self.phymed.zones[zone_id]['Kx'],self.phymed.zones[zone_id]['Ky'])
             #ZONE ASSIGNATION LOOP#############################################
             del zone_id,x_min,x_max,y_min,y_max,__cx,__cy,__e_ID,__ID
         else:
@@ -949,7 +949,7 @@ class fem:
     ##APPEND NEW RECTANGLE TO EXISTING ZONE####################################
     
     ##UPDATE ZONE PARAMETERS###################################################
-    def update_zone(self,zone_id,Ss:float,Kx:float,Ky:float): #Update zone properties
+    def updateZone(self,zone_id,Ss:float,Kx:float,Ky:float): #Update zone properties
         if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             self.phymed.zones[zone_id]['Ss']=Ss #Update Specific Storage value
             self.phymed.zones[zone_id]['Kx']=Kx #Update Kx value
@@ -964,7 +964,7 @@ class fem:
     ##UPDATE ZONE PARAMETERS###################################################
     
     ##DELETE ZONE##############################################################
-    def delete_zone(self,zone_id):
+    def deleteZone(self,zone_id):
         if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             for i in self.phymed.zones[zone_id]['elements']:
                 self.phymed.zones[0]['elements'].append(i) #Add element to default zone
@@ -987,35 +987,35 @@ class fem:
     def solve(self):
         if self.phymed.steady==True: #Steady-state
             print('ASSEMBLING GLOBAL MATRICES...')
-            ##ASSEMBLY GLOBAL MATRICES#########################################
-            self.stiff_m_assembly() #ASSEMBLY STIFFNESS MATRIX
-            self.load_v_assembly() #ASSEMBLY LOAD VECTOR
+            ##ASSEMBLE GLOBAL MATRICES#########################################
+            self.__assembleStiffnessMatrix() #ASSEMBLE STIFFNESS MATRIX
+            self.__assembleLoadVector() #ASSEMBLE LOAD VECTOR
             ###################################################################
             
             print('APPLYING BCs...')
             ##APPLY BC'S#######################################################
-            self.apply_bc_n()
-            self.apply_bc_d()
+            self.__applyNeumannBC()
+            self.__applyDirichletBC()
             ##APPLY BC'S#######################################################
             
             print('COMPUTING HYDRAULIC HEAD DISTRIBUTION...')
             ##GET HYDRAULIC HEAD DISTRIBUTION##################################    
             __aux_hh=np.matmul(np.linalg.inv(self.m_stiffness),self.v_load)
             self.phymed.hh_n=__aux_hh.tolist()
-            self.rebuild_hh()
+            self.__rebuild_h()
             ##GET HYDRAULIC HEAD DISTRIBUTION##################################
         else: #Transient-state
             print('ASSEMBLING GLOBAL MATRICES...')
-            ##ASSEMBLY GLOBAL MATRICES#########################################
-            self.mass_m_assembly() #ASSEMBLY MASS MATRIX
-            self.stiff_m_assembly() #ASSEMBLY STIFFNESS MATRIX
-            self.load_v_assembly() #ASSEMBLY LOAD VECTOR
+            ##ASSEMBLE GLOBAL MATRICES#########################################
+            self.__assembleMassMatrix() #ASSEMBLE MASS MATRIX
+            self.__assembleStiffnessMatrix() #ASSEMBLE STIFFNESS MATRIX
+            self.__assembleLoadVector() #ASSEMBLE LOAD VECTOR
             ###################################################################
             
             print('APPLYING BCs...')
             ##APPLY BC'S#######################################################
-            self.apply_bc_n()
-            self.apply_bc_d()
+            self.__applyNeumannBC()
+            self.__applyDirichletBC()
             ##APPLY BC'S#######################################################
             
             print('ASSEMBLING AUXILIAR MATRICES...')
@@ -1064,7 +1064,7 @@ class fem:
                 self.phymed.hh_n[__step]=__aux_hh.tolist()
                 ##GET HYDRAULIC HEAD DISTRIBUTION##############################
             ###HH VALUES#######################################################
-            self.rebuild_hh()
+            self.__rebuild_h()
             print('100%')
             ###HH VALUES#######################################################
     #SOLVE LINEAR SYSTEM#######################################################
@@ -1076,7 +1076,7 @@ class fem:
 #####OUPUTS####################################################################
 ###############################################################################
     ##EXPORT RESULTS TO GMSH'S .POS FORMAT#####################################
-    def export_results(self,file,step=None):
+    def exportResults(self,file,step=None):
         #WRITE AN OUTPUT FILE CONTAINING THE HYDRAULIC HEAD DISTRIBUTION#######
         __f=open(aux_f.path+'/output/'+file+'_hhd.msh','w') #Open the given file in 'write' mode
         __fOrig=open(aux_f.path+'/'+self.config['mesh_file']) #Original mesh file
@@ -1237,7 +1237,7 @@ class fem:
     ##DRAWDOWN PROFILE#########################################################
     
     ##AUXILIAR EXPORTATION OF INITIAL CONDITIONS###############################
-    def export_hh0(self,file):
+    def export_h0(self,file):
         #WRITE AN OUTPUT FILE CONTAINING THE HYDRAULIC HEAD DISTRIBUTION#######
         __f=open(aux_f.path+'/'+file+'.hh0','w') #Open the given file in 'write' mode
         

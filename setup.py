@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yagfes",
-    version="0.9.0",
+    version="0.9.1",
     author="Héctor A. Corzo Pola",
     author_email="hcorzopola@gmail.com",
     description="Yet another Python 3 package for 2D groundwater flow modeling.",

@@ -46,7 +46,7 @@ class mesh:
     """
     def __init__(self,file):
         #READ MESH FILE########################################################
-        __f=aux_f.read_dict(file) #Open the given file
+        __f=aux_f.readDict(file) #Open the given file
         
         ##BUILD MESH###########################################################
         ###MESH CHARACTERISTICS################################################
@@ -70,7 +70,7 @@ class mesh:
             self.ID[i]=i
         #READ MESH FILE########################################################
         
-    def write_bc_file(self,file):
+    def writeBCfile(self,file):
         #WRITE A BC FILE BASED ON MESH INFO####################################
         __f=open(aux_f.path+'/'+file,'w') #Open the given file in 'write' mode
         
@@ -272,9 +272,9 @@ class phymed:
         del __nodes,n_n,config
     
     #READ BOUNDARY CONDITIONS##################################################
-    def read_bc_file(self,file):
+    def readBCfile(self,file):
         #READ BC FILE##########################################################
-        __f=aux_f.read_dict(file) #Open the given file in 'read' mode
+        __f=aux_f.readDict(file) #Open the given file in 'read' mode
         
         #MESH LEFT
         if __f['x_min'][0]==0: #Dirichlet BC
@@ -309,7 +309,7 @@ class phymed:
     #READ BOUNDARY CONDITIONS##################################################
         
     #READ INITIAL CONDITIONS###################################################
-    def read_hh0(self,file):
+    def read_h0(self,file):
         #READS AN HHD FILE AND ASSIGNS IT TO HH_0##############################
         __f=open(aux_f.path+'/'+file)
         
@@ -342,7 +342,7 @@ class fdm:
     def __init__(self,init):
         self.type='FDM'
         #READ INIT FILE########################################################
-        self.config=aux_f.read_dict(init)
+        self.config=aux_f.readDict(init)
         #READ INIT FILE########################################################
         #CREATE MESH AND PHYMED OBJECTS########################################
         self.mesh=mesh(self.config['mesh_file'])
@@ -357,7 +357,7 @@ class fdm:
 #####ASSEMBLE MATRICES AND VECTORS#############################################
 ###############################################################################
     ##ASSEMBLE COEFFICIENTS MATRIX#############################################
-    def coeff_m_assembly(self):
+    def __assembleCoefficientMatrix(self):
         #INITIALIZE ARRAY FOR COEFFICIENTS MATRIX
         __n_n=self.mesh.nx*self.mesh.ny
         self.m_coeff=[0]*__n_n
@@ -460,7 +460,7 @@ class fdm:
     ##ASSEMBLE COEFFICIENTS MATRIX#############################################
     
     ##ASSEMBLE LOAD VECTOR#####################################################
-    def load_v_assembly(self):
+    def __assembleLoadVector(self):
         __n_n=self.mesh.nx*self.mesh.ny
         #Steady-state##########################################################
         if self.phymed.steady==True:
@@ -494,7 +494,7 @@ class fdm:
 #####APPLY BOUNDARY CONDITIONS#################################################
 ###############################################################################
     ##APPLY DIRICHLET BC's#####################################################
-    def apply_bc_d(self):
+    def __applyDirichletBC(self):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
@@ -665,7 +665,7 @@ class fdm:
     ##APPLY DIRICHLET BC's#####################################################
     
     ##APPLY NEUMANN BC's#######################################################
-    def apply_bc_n(self):
+    def __applyNeumannBC(self):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
@@ -731,7 +731,7 @@ class fdm:
     ##APPLY NEUMANN BC's#######################################################
     
     ##REBUILD HH ARRAY#########################################################
-    def rebuild_hh(self):
+    def __rebuild_h(self):
         #UNIT CONVERSION#######################################################
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
             uF=aux_f.unit_dict[self.config['head'].lower()]/aux_f.unit_dict[self.config['length'].lower()] #Get conversion factor
@@ -818,14 +818,14 @@ class fdm:
 #####MODIFY PHYSICAL MEDIUM####################################################
 ###############################################################################
     ##ADD WELLS################################################################
-    def add_well(self,file):
+    def addWell(self,file):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
             uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
         #UNIT CONVERSION#######################################################
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
-        __f=aux_f.read_dict(file)
+        __f=aux_f.readDict(file)
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
         __node=self.mesh.coord2node(__f['x'],__f['y']) #Retrieve node indexes
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
@@ -854,7 +854,7 @@ class fdm:
     
     #ZONE RELATED FUNCTIONS####################################################
     ##DEFINE NEW ZONE##########################################################
-    def new_zone(self,zone_id,Ss:float,Kx:float,Ky:float,x_min:float,x_max:float,y_min:float,y_max:float): #Defines a new zone in the domain as a rectangle
+    def newZone(self,zone_id,Ss:float,Kx:float,Ky:float,x_min:float,x_max:float,y_min:float,y_max:float): #Defines a new zone in the domain as a rectangle
         if zone_id not in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             #IDENTIFY ALL NODES INSIDE THE ZONE################################
             __x_min=self.mesh.m_p[0][0]
@@ -907,7 +907,7 @@ class fdm:
     ##DEFINE NEW ZONE##########################################################
     
     ##APPEND NEW RECTANGLE TO EXISTING ZONE####################################
-    def expand_zone(self,zone_id,x_min:float,x_max:float,y_min:float,y_max:float): #Adds a new rectangle to an existing zone
+    def expandZone(self,zone_id,x_min:float,x_max:float,y_min:float,y_max:float): #Adds a new rectangle to an existing zone
         if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             #IDENTIFY ALL NODES INSIDE THE ZONE################################
             __x_min=self.mesh.m_p[0][0]
@@ -950,7 +950,7 @@ class fdm:
             for i in __ID:
                 if i not in self.phymed.zones[zone_id]['nodes']:
                     self.phymed.zones[zone_id]['nodes'].append(i)
-            self.update_zone(zone_id,self.phymed.zones[zone_id]['Ss'],self.phymed.zones[zone_id]['Kx'],self.phymed.zones[zone_id]['Ky'])
+            self.updateZone(zone_id,self.phymed.zones[zone_id]['Ss'],self.phymed.zones[zone_id]['Kx'],self.phymed.zones[zone_id]['Ky'])
             #ZONE ASSIGNATION LOOP#############################################
             del zone_id,x_min,x_max,y_min,y_max,i_min,i_max,j_min,j_max,__node,__node_ID,__ID
         else:
@@ -959,7 +959,7 @@ class fdm:
     ##APPEND NEW RECTANGLE TO EXISTING ZONE####################################
     
     ##UPDATE ZONE PARAMETERS###################################################
-    def update_zone(self,zone_id,Ss:float,Kx:float,Ky:float): #Update zone properties
+    def updateZone(self,zone_id,Ss:float,Kx:float,Ky:float): #Update zone properties
         if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             self.phymed.zones[zone_id]['Ss']=Ss #Update Specific Storage value
             self.phymed.zones[zone_id]['Kx']=Kx #Update Kx value
@@ -974,7 +974,7 @@ class fdm:
     ##UPDATE ZONE PARAMETERS###################################################
     
     ##DELETE ZONE##############################################################
-    def delete_zone(self,zone_id):
+    def deleteZone(self,zone_id):
         if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
             for i in self.phymed.zones[zone_id]['nodes']:
                 self.phymed.zones[0]['nodes'].append(i) #Add node to default zone
@@ -997,34 +997,34 @@ class fdm:
     def solve(self,tol=0.001):
         if self.phymed.steady==True: #Steady-state
             print('ASSEMBLING GLOBAL MATRICES...')
-            ##ASSEMBLY GLOBAL MATRICES#########################################
-            self.coeff_m_assembly() #ASSEMBLY COEFFICIENTS MATRIX
-            self.load_v_assembly() #ASSEMBLY LOAD VECTOR
-            ##ASSEMBLY GLOBAL MATRICES#########################################
+            ##ASSEMBLE GLOBAL MATRICES#########################################
+            self.__assembleCoefficientMatrix() #ASSEMBLE COEFFICIENTS MATRIX
+            self.__assembleLoadVector() #ASSEMBLE LOAD VECTOR
+            ##ASSEMBLE GLOBAL MATRICES#########################################
             
             print('APPLYING BCs...')
             ##APPLY BC's#######################################################
-            self.apply_bc_n()
-            self.apply_bc_d()
+            self.__applyNeumannBC()
+            self.__applyDirichletBC()
             ##APPLY BC's#######################################################
             
             print('COMPUTING HYDRAULIC HEAD DISTRIBUTION...')
             ##GET HYDRAULIC HEAD DISTRIBUTION##################################
             __aux_hh=np.matmul(np.linalg.inv(self.m_coeff),self.v_load)
             self.phymed.hh_n=__aux_hh.tolist()
-            self.rebuild_hh()
+            self.__rebuild_h()
             ##GET HYDRAULIC HEAD DISTRIBUTION################################## 
         else: #Transient-state
             print('ASSEMBLING GLOBAL MATRICES...')
-            ##ASSEMBLY GLOBAL MATRICES#########################################
-            self.coeff_m_assembly() #ASSEMBLY COEFFICIENTS MATRIX
-            self.load_v_assembly() #ASSEMBLY LOAD VECTOR
-            ##ASSEMBLY GLOBAL MATRICES#########################################
+            ##ASSEMBLE GLOBAL MATRICES#########################################
+            self.__assembleCoefficientMatrix() #ASSEMBLE COEFFICIENTS MATRIX
+            self.__assembleLoadVector() #ASSEMBLE LOAD VECTOR
+            ##ASSEMBLE GLOBAL MATRICES#########################################
             
             print('APPLYING BCs...')
             ##APPLY BC's#######################################################
-            self.apply_bc_n()
-            self.apply_bc_d()
+            self.__applyNeumannBC()
+            self.__applyDirichletBC()
             ##APPLY BC's#######################################################
             
             print('ASSEMBLING AUXILIAR MATRICES...')
@@ -1050,7 +1050,7 @@ class fdm:
                 self.phymed.hh_n[__step]=__aux_hh.tolist()
                 ##GET HYDRAULIC HEAD DISTRIBUTION##############################
             ###HH VALUES#######################################################
-            self.rebuild_hh()
+            self.__rebuild_h()
             print('100%')
             ###HH VALUES#######################################################
     #SOLVE LINEAR SYSTEM#######################################################
@@ -1062,7 +1062,7 @@ class fdm:
 #####OUPUTS####################################################################
 ###############################################################################
     ##EXPORT RESULTS TO NATIVE .HHD FORMAT#####################################
-    def export_results(self,file,step=None):
+    def exportResults(self,file,step=None):
         #WRITE AN OUTPUT FILE CONTAINING THE HYDRAULIC HEAD DISTRIBUTION#######
         __f=open(aux_f.path+'/output/'+file+'.hhd','w') #Open the given file in 'write' mode
         
