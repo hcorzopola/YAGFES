@@ -498,7 +498,7 @@ class fdm:
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
-            uF=aux_f.unit_dict[self.config['length'].lower()]/aux_f.unit_dict[self.config['head'].lower()] #Get conversion factor            
+            uF=aux_f.unitDict[self.config['length'].lower()]/aux_f.unitDict[self.config['head'].lower()] #Get conversion factor            
         #UNIT CONVERSION#######################################################
         #Steady-State##########################################################
         if self.phymed.steady==True:
@@ -669,7 +669,7 @@ class fdm:
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
-            uF=(aux_f.unit_dict[self.config['length'].lower()])/(aux_f.unit_dict[self.config['head'].lower()]) #Get conversion factor            
+            uF=(aux_f.unitDict[self.config['length'].lower()])/(aux_f.unitDict[self.config['head'].lower()]) #Get conversion factor            
         #UNIT CONVERSION#######################################################
         ##INCREASE MESH SIZE###################################################
         #ASSIGN FICTIONAL HEAD VALUES TO MATCH FLOW CONDITION##################
@@ -734,7 +734,7 @@ class fdm:
     def __rebuild_h(self):
         #UNIT CONVERSION#######################################################
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
-            uF=aux_f.unit_dict[self.config['head'].lower()]/aux_f.unit_dict[self.config['length'].lower()] #Get conversion factor
+            uF=aux_f.unitDict[self.config['head'].lower()]/aux_f.unitDict[self.config['length'].lower()] #Get conversion factor
             for i in range(len(self.phymed.hh_n)):
                 self.phymed.hh_n[i]*=uF
         #UNIT CONVERSION#######################################################
@@ -822,7 +822,7 @@ class fdm:
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
-            uF=(aux_f.unit_dict[self.config['length'].lower()]**3)/(aux_f.unit_dict[self.config['head'].lower()]**3) #Get conversion factor            
+            uF=(aux_f.unitDict[self.config['length'].lower()]**3)/(aux_f.unitDict[self.config['head'].lower()]**3) #Get conversion factor            
         #UNIT CONVERSION#######################################################
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
         __f=aux_f.readDict(file)

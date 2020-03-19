@@ -41,11 +41,11 @@ import os #Import for getting current path
 """
 path=os.getcwd()
 #Dictionary containing translations for axis names, etc.
-lang_dict={'es':['Distancia','Tiempo','Abatimiento'],
+langDict={'es':['Distancia','Tiempo','Abatimiento'],
            'en':['Distance','Time','Drawdown'],
            'fr':['Distance','Temps','Dépression']}
 #Dictionary for unit conversion
-unit_dict={'mm':1000,'cm':100,'dm':10,'m':1,'dam':0.1,'hm':0.01,'km':0.001,\
+unitDict={'mm':1000,'cm':100,'dm':10,'m':1,'dam':0.1,'hm':0.01,'km':0.001,\
            'in':39.3701,'ft':3.28084,'yd':1.09361,'mi':6.21371E-04}
 """
 ##########################AUXILIAR "GLOBAL" VARIABLES##########################
@@ -101,8 +101,8 @@ def plot_h(model,npts=21,superpose=False,step=None,lang='en'):
         #STYLE COMMANDS########################################################
         plot.gca().invert_yaxis() #Flip 'y' axis
         plot.title(model.config['model_name'],fontweight='bold')
-        plot.xlabel(lang_dict[lang][0]+' ('+model.config['length']+')')
-        plot.ylabel(lang_dict[lang][0]+' ('+model.config['length']+')')
+        plot.xlabel(langDict[lang][0]+' ('+model.config['length']+')')
+        plot.ylabel(langDict[lang][0]+' ('+model.config['length']+')')
         #STYLE COMMANDS########################################################
         color_bar=plot.colorbar(contour_map) #Plot colorbar
 #        color_bar.set_label('h ('+model.config['head']+')')
@@ -138,7 +138,7 @@ def plot_h(model,npts=21,superpose=False,step=None,lang='en'):
 def plot_drawdown(files:list,lang='en'):
     ##INITIALIZE FIGURE########################################################
     fig=plot.figure()
-    plot.title(lang_dict[lang][2].upper())#,fontweight='bold')
+    plot.title(langDict[lang][2].upper())#,fontweight='bold')
     ##INITIALIZE FIGURE########################################################
     
     ##RETRIEVE DATA FROM EACH FILE#############################################
@@ -171,11 +171,11 @@ def plot_drawdown(files:list,lang='en'):
         del __dwn[__n]
         ##READ DRAWDOWN VALUES#################################################
         __f.close()
-        plot.ylabel(lang_dict[lang][2]+' ('+__units[1]+')')
-        if __type==0:
-            plot.xlabel(lang_dict[lang][1]+' ('+__units[0]+')')
-        elif __type==1:
-            plot.xlabel(lang_dict[lang][0]+' ('+__units[0]+')')
+        plot.ylabel(langDict[lang][2]+' ('+__units[1]+')')
+        if __type==0: #Time plot
+            plot.xlabel(langDict[lang][1]+' ('+__units[0]+')')
+        elif __type==1: #Distance plot
+            plot.xlabel(langDict[lang][0]+' ('+__units[0]+')')
         plot.plot(__k,__dwn,label=__curve_name) #'o' as third argument to display as points
     ##RETRIEVE DATA FROM EACH FILE#############################################
     
