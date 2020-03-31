@@ -41,9 +41,9 @@ import numpy as np #Import 'numpy' for numerical operations
 """
 class mesh:
     """
-    n_n = # of nodes            | n_e = # of elements
-    m_p = Point Matrix          | m_c = Connectivity Matrix
-    a_e = Element's Area        | bc = Boundary Conditions 
+    nNodes = # of nodes                 | nElements = # of elements
+    pointMatrix = Point Matrix          | cMatrix = Connectivity Matrix
+    elementArea = Element's Area        | bc = Boundary Conditions 
     """ 
     def __init__(self,file):
         #READ MESH FILE########################################################
@@ -53,16 +53,16 @@ class mesh:
         for i in range(4):
             __f.readline() #Skip 4 lines
         ###Read number of nodes################################################
-        self.n_n=int(__f.readline().rstrip('\n')) #Read number of nodes.
+        self.nNodes=int(__f.readline().rstrip('\n')) #Read number of nodes.
         #######################################################################
         ###Create an array ('Point Matrix') for storing the node coordinates###
-        self.m_p=[] #The 'Point Matrix' has dimensions of 'n_n x 3'.
+        self.pointMatrix=[] #The 'Point Matrix' has dimensions of 'nNodes x 3'.
         #This allow us to store up to three coordinates per node.
         #######################################################################
         ###Retrieve node coordinates from the mesh file########################
-        for i in range(self.n_n):
+        for i in range(self.nNodes):
             __aux_n=__f.readline().split()[1:] #Store the line in an auxiliar array. Skip node number.
-            self.m_p.append([float(x) for x in __aux_n])
+            self.pointMatrix.append([float(x) for x in __aux_n])
         #######################################################################
         ##READ NODES INFO######################################################
         
@@ -70,15 +70,15 @@ class mesh:
         for i in range(2):
             __f.readline() #Skip 2 lines
         ###Read number of elements#############################################
-        self.n_e=int(__f.readline().rstrip('\n')) #Read number of elements.
+        self.nElements=int(__f.readline().rstrip('\n')) #Read number of elements.
         #This number accounts for two-node elements. We will update this later,
         #since the final number of elements might not be the same.
         #######################################################################
         ###Create an array ('Connectivity Matrix') for storing the nodes per element
-        self.m_c=list()
-        #The 'Connectivity Matrix' has dimensions of 'n_e x 3', since we are
+        self.cMatrix=list()
+        #The 'Connectivity Matrix' has dimensions of 'nElements x 3', since we are
         # working with triangular elements. However, we won't specify its
-        # dimensions in the code, since we are uncertain of 'n_e' final value.
+        # dimensions in the code, since we are uncertain of 'nElements' final value.
         #######################################################################
         ###Create an array for storing Boundary Conditions (BC's)##############
         self.bc=list()
@@ -88,34 +88,34 @@ class mesh:
         #3) nodes composing the 'line' on the boundary.
         #######################################################################
         ###Retrieve elements from the mesh file################################
-        for i in range(self.n_e):
+        for i in range(self.nElements):
             __aux_e=__f.readline().split() #Store the line in an auxiliar array
             if __aux_e[1]=='1': #Linear elements
                 self.bc.append( list( map(int,__aux_e[3:]) ) ) #Store element in 'bc'
             else: #Triangular elements
-                self.m_c.append( list( map(int,__aux_e[5:]) ) ) #Store element in 'm_c'
+                self.cMatrix.append( list( map(int,__aux_e[5:]) ) ) #Store element in 'cMatrix'
         ###Fix node index######################################################
-        for i in range(len(self.m_c)):
+        for i in range(len(self.cMatrix)):
             for j in range(3):
-                self.m_c[i][j]=self.m_c[i][j]-1
+                self.cMatrix[i][j]=self.cMatrix[i][j]-1
         #######################################################################
-        ###Update 'n_e' value##################################################
-        self.n_e=len(self.m_c)
+        ###Update 'nElements' value##################################################
+        self.nElements=len(self.cMatrix)
         #######################################################################
         ##READ ELEMENTS INFO###################################################
         __f.close() #Close the file
         #READ MESH FILE########################################################
         
         #CALCULATE ELEMENT AREA################################################
-        self.a_e=[0]*self.n_e #The array has a size equal to 'n_e'.
-        for i in range(self.n_e):
-            a=[self.m_p[self.m_c[i][1]][0]-self.m_p[self.m_c[i][0]][0],\
-               self.m_p[self.m_c[i][1]][1]-self.m_p[self.m_c[i][0]][1],\
-               self.m_p[self.m_c[i][1]][2]-self.m_p[self.m_c[i][0]][2]]
-            b=[self.m_p[self.m_c[i][2]][0]-self.m_p[self.m_c[i][0]][0],\
-               self.m_p[self.m_c[i][2]][1]-self.m_p[self.m_c[i][0]][1],\
-               self.m_p[self.m_c[i][2]][2]-self.m_p[self.m_c[i][0]][2]]
-            self.a_e[i]=0.5*((a[0]*b[1]-a[1]*b[0])**2+\
+        self.elementArea=[0]*self.nElements #The array has a size equal to 'nElements'.
+        for i in range(self.nElements):
+            a=[self.pointMatrix[self.cMatrix[i][1]][0]-self.pointMatrix[self.cMatrix[i][0]][0],\
+               self.pointMatrix[self.cMatrix[i][1]][1]-self.pointMatrix[self.cMatrix[i][0]][1],\
+               self.pointMatrix[self.cMatrix[i][1]][2]-self.pointMatrix[self.cMatrix[i][0]][2]]
+            b=[self.pointMatrix[self.cMatrix[i][2]][0]-self.pointMatrix[self.cMatrix[i][0]][0],\
+               self.pointMatrix[self.cMatrix[i][2]][1]-self.pointMatrix[self.cMatrix[i][0]][1],\
+               self.pointMatrix[self.cMatrix[i][2]][2]-self.pointMatrix[self.cMatrix[i][0]][2]]
+            self.elementArea[i]=0.5*((a[0]*b[1]-a[1]*b[0])**2+\
                     (a[0]*b[2]-a[2]*b[0])**2+\
                     (a[1]*b[2]-a[2]*b[1])**2)**0.5
         #CALCULATE ELEMENT AREA################################################
@@ -245,7 +245,7 @@ class mesh:
         __f.write('#WELL AS NEUMANN BC\n') #Write the section title
         ###Loop for identifying lines and assigning them flow values###########
         __lineID=list() #auxiliar array to store line IDs
-        __lineV=list() #auxiliar array to store pumping intervals
+        __lineV=list() #auxiliar array to store pumping intervals (stress periods)
         __well=list() #auxiliar array to identify wells
         for i in range(__nbc):
             #Check BC flag; 2=Well expressed as a Neumann BC
@@ -271,9 +271,9 @@ class mesh:
                     #Get well ID
                     __ID=__lineID.index(self.bc[j][1])
                     #Check if 'element' line ID equals current line ID
-                    if __well[__ID]==__well[i]:
-                        __l=((self.m_p[self.bc[j][3]-1][0]-self.m_p[self.bc[j][2]-1][0])**2+\
-                             (self.m_p[self.bc[j][3]-1][1]-self.m_p[self.bc[j][2]-1][1])**2)**0.5
+                    if __ID==i:
+                        __l=((self.pointMatrix[self.bc[j][3]-1][0]-self.pointMatrix[self.bc[j][2]-1][0])**2+\
+                             (self.pointMatrix[self.bc[j][3]-1][1]-self.pointMatrix[self.bc[j][2]-1][1])**2)**0.5
                         __p+=__l
             __lineP.append(__p)
         ###Loop for getting the perimeter of each Neumann BC line##############
@@ -282,21 +282,21 @@ class mesh:
         __l=0 #Auxiliar variable to store the number of Neumann BC faces
         __aux_n=list()
         for i in range(len(__lineID)):
-            ###Look for all 'elements' with the curre line ID##################
+            ###Look for all 'elements' with the current line ID################
             for j in range(__nbc):
                 #Check if 'element' line ID equals current line ID
                 if self.bc[j][1]==__lineID[i]:
                     __line=str(self.bc[j][2]-1)+','+\
                     str(self.bc[j][3]-1) #Node on Neumann Face
                     if isinstance(__lineV[i],list): #Transient-state
-                        __n=len(__lineV[i])
+                        __n=len(__lineV[i]) #Number of stress periods
                         __line+=','+str(__n)
                         for k in range(__n):
                             __line+=','+str(__lineV[i][k][0])+','+\
                             str(__lineV[i][k][1])+','+\
                             str(__lineV[i][k][2]/__lineP[i])
                     else: #Steady-state
-                        __n=1
+                        __n=1 #Single stress period
                         __line+=','+str(__n)+','+str(__lineV[i]/__lineP[i])
                     __line+='\n' #New line character
                     __aux_n.append(__line)
@@ -316,9 +316,9 @@ class mesh:
         #RETURN THE NEAREST NODE TO THE GIVEN COORDINATES######################
         ##Find the nearest node to the given coordinates by brute force########
         __min=100 #Auxiliar variable to store the previous minimum distance
-        for i in range(len(self.m_p)):
-            __d=((self.m_p[i][0]-x)**2+\
-                 (self.m_p[i][1]-y)**2)**0.5
+        for i in range(len(self.pointMatrix)):
+            __d=((self.pointMatrix[i][0]-x)**2+\
+                 (self.pointMatrix[i][1]-y)**2)**0.5
             #If '__d' is lower than '__min', replace '__min' by '__d' and
             # assume 'i' as the closest node.
             if __d<__min:
@@ -336,13 +336,13 @@ class mesh:
         #RETURN THE NEAREST NODE TO THE GIVEN COORDINATES######################
         ##Find the nearest node to the given coordinates by brute force########
         __min=1000 #Auxiliar variable to store the previous minimum distance
-        for i in range(len(self.m_c)):
-            __n1=self.m_c[i][0]
-            __n2=self.m_c[i][1]
-            __n3=self.m_c[i][2]
-            __d=((self.m_p[__n1][0]-x)**2+(self.m_p[__n1][1]-y)**2)**0.5+\
-            ((self.m_p[__n2][0]-x)**2+(self.m_p[__n2][1]-y)**2)**0.5+\
-            ((self.m_p[__n3][0]-x)**2+(self.m_p[__n3][1]-y)**2)**0.5
+        for i in range(len(self.cMatrix)):
+            __n1=self.cMatrix[i][0]
+            __n2=self.cMatrix[i][1]
+            __n3=self.cMatrix[i][2]
+            __d=((self.pointMatrix[__n1][0]-x)**2+(self.pointMatrix[__n1][1]-y)**2)**0.5+\
+            ((self.pointMatrix[__n2][0]-x)**2+(self.pointMatrix[__n2][1]-y)**2)**0.5+\
+            ((self.pointMatrix[__n3][0]-x)**2+(self.pointMatrix[__n3][1]-y)**2)**0.5
             #If '__d' is lower than '__min', replace '__min' by '__d' and
             # assume 'i' as the closest node.
             if __d<__min:
@@ -360,54 +360,47 @@ class mesh:
 """
 class phymed:
     """
-    n_n = # of nodes                | n_e = # of elements
+    nNodes = # of nodes             | nElements = # of elements
     k_e = Hydraulic Conductivity    | ss_e = Specific Storage
     bc_d = Dirichlet BC's           | bc_n = Neumann BC's
-    hh_n = Hydraulic Head           | q = Pumping/Recharge Well Rate
+    h_n = Hydraulic Head            | q = Pumping/Recharge Well Rate
     """
-    def __init__(self,config,n_e,n_n):
-        #RETRIEVE MEDIUM INFO FROM THE CONFIG FILE#############################
-        self.steady=config['steady']
-        ##IF WE HAVE A TRANSIENT MEDIUM (STEADY=FALSE), READ TIME PARAMETERS###
-        if self.steady==False:
-            self.dt=config['dt']
-            self.time_steps=int(config['total_time']/config['dt'])+1
-        #######################################################################
-        #######################################################################
+    def __init__(self,config,nElements,nNodes):
         #INITIALIZE ALL THE ARRAYS USED FOR STORING PHYSICAL PROPERTIES########
-        ##INITIALIZE HYDRAULIC HEAD ARRAY######################################
-        self.hh_n=[0]*n_n
-        #######################################################################
         ##INITIALIZE HYDRAULIC CONDUCTIVITY ARRAY##############################
-        self.k_e=[1]*n_e #Heterogeneity
-        for i in range(n_e): #Anisotropy
-            self.k_e[i]=[float(config['Kx']),float(config['Ky'])] #Hydraulic Conductivity Array (n_e x 2)
+        self.k_e=[1]*nElements #Heterogeneity
+        for i in range(nElements): #Anisotropy
+            self.k_e[i]=[float(config['Kx']),float(config['Ky'])] #Hydraulic Conductivity Array (nElements x 2)
         #######################################################################
         ##INITIALIZE SPECIFIC STORAGE ARRAY####################################
-        self.ss_e=[float(config['Ss'])]*n_e
+        self.ss_e=[float(config['Ss'])]*nElements
         #######################################################################
         ##INITIALIZE WELL CONDITIONS ARRAY#####################################
-        self.q=[0]*n_n
+        self.q=dict()
         #######################################################################
-        ##ADD TEMPORAL AXIS IF MEDIUM IS IN TRANSIENT-STATE####################
-        if self.steady==False: #Check steady-state flag
-            ###TEMPORAL AXIS FOR NODE PROPERTIES
-            for i in range(n_n):
-                self.q[i]=[0]*2 #To store 'previous' and 'current' states
-            #############################
-            self.hh_n=[0]*2 #To store 'previous' and 'current' states
+        ##INITIALIZE HYDRAULIC HEAD ARRAY######################################
+        self.steady=config['steady'] #Check if we are working with transient-state or steady-state flow
+        if self.steady==True: #Steady-state flow
+            self.h_n=[0]*nNodes
+        else: #Transient-state flow
+            ##"ADD" TEMPORAL AXIS IF MEDIUM IS IN TRANSIENT-STATE##############
+            ##READ TIME PARAMETERS#############################################
+            self.dt=config['dt']
+            self.timeSteps=int(config['total_time']/config['dt'])+1
+            ##MODIFY HYDRAULIC HEAD ARRAY FOR TRANSIENT-STATE FLOW#############
+            self.h_n=[0]*2 #To store 'previous' and 'current' states
             for i in range(2):
-                self.hh_n[i]=[0]*n_n
+                self.h_n[i]=[0]*nNodes
         #######################################################################
         #INITIALIZE ALL THE ARRAYS USED FOR STORING BOUNDARY CONDITIONS########
         self.bc_d=list()
         self.bc_n=list()
-        self.well_asbcn=list()
+        self.well_asBC=list()
         #######################################################################
         #INITIALIZE DICTIONARY FOR STORING LAYER/ZONE PROPERTIES###############
         ##INITIALIZE AUXILIAR ARRAY FOR STORING NODE IDS
-        __elements=[0]*n_e
-        for i in range(n_e):
+        __elements=[0]*nElements
+        for i in range(nElements):
             __elements[i]=i
         ##DEFINE DICTIONARY WITH ZONE PROPERTIES
         self.zones={0:{'Ss':float(config['Ss']),
@@ -415,7 +408,6 @@ class phymed:
                        'Ky':float(config['Ky']),
                        'elements':__elements}}
         #######################################################################
-        del __elements,n_n,n_e,config
         
     #READ BOUNDARY CONDITIONS##################################################
     def readBCfile(self,file):
@@ -449,7 +441,7 @@ class phymed:
         if self.steady==True: #Steady-state
             for i in range(__n):
                 __aux=__f.readline().rstrip('\n').split(',')
-                self.well_asbcn.append([int(__aux[0]),int(__aux[1]),float(__aux[3])])
+                self.well_asBC.append([int(__aux[0]),int(__aux[1]),float(__aux[3])])
         else: #Transient-state
             for i in range(__n):
                 __aux=__f.readline().rstrip('\n').split(',')
@@ -457,12 +449,11 @@ class phymed:
                 __v=list()
                 for j in range(int(__aux[2])):
                     __v.append([float(__aux[3+j*3]),float(__aux[4+j*3]),float(__aux[5+j*3])])
-                self.well_asbcn.append([int(__aux[0]),int(__aux[1]),int(__aux[2]),__v])
+                self.well_asBC.append([int(__aux[0]),int(__aux[1]),int(__aux[2]),__v])
         #WELL AS NEUMANN BC's##################################################
         
         __f.close()
         #READ BC FILE##########################################################
-        del __n,__aux
     #READ BOUNDARY CONDITIONS##################################################
         
     #READ INITIAL CONDITIONS###################################################
@@ -473,11 +464,10 @@ class phymed:
         __n=int(__f.readline()) #Read number of nodes
         for i in range(__n):
             __aux=__f.readline().split()
-            self.hh_n[0][i]=float(__aux[1])
+            self.h_n[0][i]=float(__aux[1])
         
         __f.close()
         #READS AN HHD FILE AND ASSIGNS IT TO HH_0##############################
-        del __n,__aux
     #READ INITIAL CONDITIONS###################################################
 """
 #########################PHYSICAL MEDIUM CLASS SECTION#########################
@@ -488,9 +478,9 @@ class phymed:
 """
 class fem:
     """
-    mesh = Mesh Object          | phymed = Physical Medium Object
-    m_mass = Mass Matrix        | m_stiffness = Stiffnes Matrix
-    v_load = Load Vector        |
+    mesh = Mesh Object          | phyMed = Physical Medium Object
+    massMatrix = Mass Matrix    | stiffnessMatrix = Stiffnes Matrix
+    loadVector = Load Vector    |
     """  
     def __init__(self,init):
         self.type='FEM'
@@ -499,13 +489,13 @@ class fem:
         #READ INIT FILE########################################################
         #CREATE MESH AND PHYMED OBJECTS########################################
         self.mesh=mesh(self.config['mesh_file'])
-        self.phymed=phymed(self.config,self.mesh.n_e,self.mesh.n_n)
+        self.phyMed=phymed(self.config,self.mesh.nElements,self.mesh.nNodes)
         #CREATE MESH AND PHYMED OBJECTS########################################
         #INITIALIZE MATRICES ARRAYS
-        self.m_mass=list() #INITIALIZE ARRAY FOR MASS MATRIX
-        self.m_stiffness=list() #INITIALIZE ARRAY FOR STIFFNESS MATRIX
+        self.massMatrix=list() #INITIALIZE ARRAY FOR MASS MATRIX
+        self.stiffnessMatrix=list() #INITIALIZE ARRAY FOR STIFFNESS MATRIX
         #INITIALIZE ARRAY FOR LOAD VECTOR
-        self.v_load=list()
+        self.loadVector=list()
         #######################################################################
         
 ###############################################################################
@@ -514,65 +504,65 @@ class fem:
     ##ASSEMBLE MASS MATRIX#####################################################
     def __assembleMassMatrix(self):
         #INITIALIZE ARRAY FOR MASS MATRIX
-        self.m_mass=[0]*self.mesh.n_n
-        for i in range(self.mesh.n_n):
-            self.m_mass[i]=[0]*self.mesh.n_n
+        self.massMatrix=[0]*self.mesh.nNodes
+        for i in range(self.mesh.nNodes):
+            self.massMatrix[i]=[0]*self.mesh.nNodes
         #############################
-        for k in range(self.mesh.n_e):
+        for k in range(self.mesh.nElements):
             ##CALCULATE LOCAL ELEMENT MASS MATRIX##############################
             for i in range(3): #Local Element Mass Matrix Index 'i'
                 for j in range(3): #Local Element Mass Matrix Index 'j'
                     if i==j: #Main diagonal
-                        __lmm_ij=self.mesh.a_e[k]*self.phymed.ss_e[k]/6
+                        __lmm_ij=self.mesh.elementArea[k]*self.phyMed.ss_e[k]/6
                     else:
-                        __lmm_ij=self.mesh.a_e[k]*self.phymed.ss_e[k]/12
+                        __lmm_ij=self.mesh.elementArea[k]*self.phyMed.ss_e[k]/12
                     (global_i,global_j)=self.__local2global(k,i,j)
-                    self.m_mass[global_i][global_j]+=__lmm_ij #Add to Global Mass Matrix
+                    self.massMatrix[global_i][global_j]+=__lmm_ij #Add to Global Mass Matrix
             ###################################################################
     ##ASSEMBLE MASS MATRIX#####################################################
     
     ##ASSEMBLE STIFFNESS MATRIX################################################
     def __assembleStiffnessMatrix(self):
         #INITIALIZE ARRAY FOR STIFFNESS MATRIX
-        self.m_stiffness=[0]*self.mesh.n_n
-        for i in range(self.mesh.n_n):
-            self.m_stiffness[i]=[0]*self.mesh.n_n
+        self.stiffnessMatrix=[0]*self.mesh.nNodes
+        for i in range(self.mesh.nNodes):
+            self.stiffnessMatrix[i]=[0]*self.mesh.nNodes
         ##############################
-        for k in range(self.mesh.n_e):
+        for k in range(self.mesh.nElements):
             ##CALCULATE LOCAL ELEMENT STIFFNESS MATRIX#########################
             ###GET ELEMENT THE HAT FUNCTION FOR ELEMENT K######################
             (__a,__b,__c)=self.hat_phi(k)
             ###################################################################
             for i in range(3): #Local Element Stiffness Matrix Index 'i'
                 for j in range(3): #Local Element Stiffness Matrix Index 'j'
-                    __lsm_ij=(self.phymed.k_e[k][0]*(__b[i]*__b[j])+\
-                    self.phymed.k_e[k][1]*(__c[i]*__c[j]))*self.mesh.a_e[k]
+                    __lsm_ij=(self.phyMed.k_e[k][0]*(__b[i]*__b[j])+\
+                    self.phyMed.k_e[k][1]*(__c[i]*__c[j]))*self.mesh.elementArea[k]
                     (global_i,global_j)=self.__local2global(k,i,j)
-                    self.m_stiffness[global_i][global_j]+=__lsm_ij #Add to Global Stiffness Matrix
+                    self.stiffnessMatrix[global_i][global_j]+=__lsm_ij #Add to Global Stiffness Matrix
             ###################################################################
     ##ASSEMBLE STIFFNESS MATRIX################################################
     
     ##ASSEMBLE LOAD VECTOR#####################################################
     def __assembleLoadVector(self):
         #Steady-state##########################################################
-        if self.phymed.steady==True:
+        if self.phyMed.steady==True:
             #INITIALIZE ARRAY FOR LOAD VECTOR
-            self.v_load=[0]*self.mesh.n_n
+            self.loadVector=[0]*self.mesh.nNodes
             #ASSIGN VALUES
-            for i in range(self.mesh.n_n):
-                self.v_load[i]-=self.phymed.q[i]
+            for i in self.phymed.q:
+                self.loadVector[i]-=self.phyMed.q[i]
         #Steady-state##########################################################
         
         #Transient-state#######################################################
         else:
             #INITIALIZE ARRAY FOR LOAD VECTOR
-            self.v_load=[0]*self.phymed.time_steps
-            for i in range(self.phymed.time_steps):
-                self.v_load[i]=[0]*self.mesh.n_n
+            self.loadVector=[0]*self.phyMed.timeSteps
+            for i in range(self.phyMed.timeSteps):
+                self.loadVector[i]=[0]*self.mesh.nNodes
             #ASSIGN VALUES
-            for i in range(self.mesh.n_n):
-                for k in range(self.phymed.time_steps):
-                    self.v_load[k][i]-=self.phymed.q[i][k]
+            for i in self.phymed.q:
+                for k in range(self.phyMed.timeSteps):
+                    self.loadVector[k][i]-=self.phyMed.q[i][k]
         #Transient-state#######################################################
     ##ASSEMBLE LOAD VECTOR#####################################################
     
@@ -583,26 +573,26 @@ class fem:
     ##LOCAL2GLOBAL#############################################################
     def __local2global(self,k,i,j):
         #'k'=element index, 'i'=local element index i, 'j'=local element index j
-        global_i=self.mesh.m_c[k][i]
-        global_j=self.mesh.m_c[k][j]
+        global_i=self.mesh.cMatrix[k][i]
+        global_j=self.mesh.cMatrix[k][j]
         return (global_i,global_j)
     ##LOCAL2GLOBAL#############################################################
     
     ##COMPUTE HAT FUNCTION OF ELEMENT 'K'######################################
     def hat_phi(self,k):
-        __n1=self.mesh.m_c[k][0] #Node 1
-        __n2=self.mesh.m_c[k][1] #Node 2
-        __n3=self.mesh.m_c[k][2] #Node 3
-        __j=2*self.mesh.a_e[k] #Jacobian
-        a=[(self.mesh.m_p[__n2][0]*self.mesh.m_p[__n3][1]-self.mesh.m_p[__n3][0]*self.mesh.m_p[__n2][1])/__j,\
-           (self.mesh.m_p[__n3][0]*self.mesh.m_p[__n1][1]-self.mesh.m_p[__n1][0]*self.mesh.m_p[__n3][1])/__j,\
-           (self.mesh.m_p[__n1][0]*self.mesh.m_p[__n2][1]-self.mesh.m_p[__n2][0]*self.mesh.m_p[__n1][1])/__j]
-        b=[(self.mesh.m_p[__n2][1]-self.mesh.m_p[__n3][1])/__j,\
-           (self.mesh.m_p[__n3][1]-self.mesh.m_p[__n1][1])/__j,\
-           (self.mesh.m_p[__n1][1]-self.mesh.m_p[__n2][1])/__j]
-        c=[(self.mesh.m_p[__n3][0]-self.mesh.m_p[__n2][0])/__j,\
-           (self.mesh.m_p[__n1][0]-self.mesh.m_p[__n3][0])/__j,\
-           (self.mesh.m_p[__n2][0]-self.mesh.m_p[__n1][0])/__j]
+        __n1=self.mesh.cMatrix[k][0] #Node 1
+        __n2=self.mesh.cMatrix[k][1] #Node 2
+        __n3=self.mesh.cMatrix[k][2] #Node 3
+        __j=2*self.mesh.elementArea[k] #Jacobian
+        a=[(self.mesh.pointMatrix[__n2][0]*self.mesh.pointMatrix[__n3][1]-self.mesh.pointMatrix[__n3][0]*self.mesh.pointMatrix[__n2][1])/__j,\
+           (self.mesh.pointMatrix[__n3][0]*self.mesh.pointMatrix[__n1][1]-self.mesh.pointMatrix[__n1][0]*self.mesh.pointMatrix[__n3][1])/__j,\
+           (self.mesh.pointMatrix[__n1][0]*self.mesh.pointMatrix[__n2][1]-self.mesh.pointMatrix[__n2][0]*self.mesh.pointMatrix[__n1][1])/__j]
+        b=[(self.mesh.pointMatrix[__n2][1]-self.mesh.pointMatrix[__n3][1])/__j,\
+           (self.mesh.pointMatrix[__n3][1]-self.mesh.pointMatrix[__n1][1])/__j,\
+           (self.mesh.pointMatrix[__n1][1]-self.mesh.pointMatrix[__n2][1])/__j]
+        c=[(self.mesh.pointMatrix[__n3][0]-self.mesh.pointMatrix[__n2][0])/__j,\
+           (self.mesh.pointMatrix[__n1][0]-self.mesh.pointMatrix[__n3][0])/__j,\
+           (self.mesh.pointMatrix[__n2][0]-self.mesh.pointMatrix[__n1][0])/__j]
         return (a,b,c)
     ##COMPUTE HAT FUNCTION OF ELEMENT 'K'######################################
     
@@ -624,49 +614,49 @@ class fem:
             uF=aux_f.unitDict[self.config['length'].lower()]/aux_f.unitDict[self.config['head'].lower()] #Get conversion factor
         #UNIT CONVERSION#######################################################
         #Sort the 'bc_d' array for an easier time 'popping' nodes.
-        self.phymed.bc_d.sort()
+        self.phyMed.bc_d.sort()
         __counter=0 #Auxiliar counter used for keeping track of how many nodes have been removed
         #Steady-state##########################################################
-        if self.phymed.steady==True:
-            for k in range(len(self.phymed.bc_d)):
-                __node=self.phymed.bc_d[k][0]-__counter
+        if self.phyMed.steady==True:
+            for k in range(len(self.phyMed.bc_d)):
+                __node=self.phyMed.bc_d[k][0]-__counter
                 ##REMOVE NODE FROM HYDRAULIC HEAD VECTOR#######################
-                del self.phymed.hh_n[__node]
+                del self.phyMed.h_n[__node]
                 ##REMOVE NODE FROM LOAD VECTOR#################################
-                del self.v_load[__node]
+                del self.loadVector[__node]
                 ##REMOVE ROW FROM STIFFNESS MATRIX#############################
-                del self.m_stiffness[__node]
+                del self.stiffnessMatrix[__node]
                 ##ADDITIONAL OPERATIONS########################################
-                for i in range(len(self.v_load)):
-                    self.v_load[i]-=self.m_stiffness[i][__node]*\
-                    self.phymed.bc_d[k][1]*uF
+                for i in range(len(self.loadVector)):
+                    self.loadVector[i]-=self.stiffnessMatrix[i][__node]*\
+                    self.phyMed.bc_d[k][1]*uF
                     ###REMOVE COLUMN FROM STIFFNESS MATRIX#####################
-                    del self.m_stiffness[i][__node]
+                    del self.stiffnessMatrix[i][__node]
                 __counter+=1
         #Steady-state##########################################################
         #Transient-state#######################################################
-        if self.phymed.steady==False:
-            for k in range(len(self.phymed.bc_d)):
-                __node=self.phymed.bc_d[k][0]-__counter
+        if self.phyMed.steady==False:
+            for k in range(len(self.phyMed.bc_d)):
+                __node=self.phyMed.bc_d[k][0]-__counter
                 ##REMOVE NODE FROM HYDRAULIC HEAD VECTOR#######################
-                for i in range(self.phymed.time_steps):
-                    del self.phymed.hh_n[i][__node]
+                for i in range(self.phyMed.timeSteps):
+                    del self.phyMed.h_n[i][__node]
                 ##REMOVE NODE FROM LOAD VECTOR#################################
-                for i in range(self.phymed.time_steps):
-                    del self.v_load[i][__node]
+                for i in range(self.phyMed.timeSteps):
+                    del self.loadVector[i][__node]
                 ##REMOVE ROW FROM STIFFNESS MATRIX#############################
-                del self.m_stiffness[__node]
+                del self.stiffnessMatrix[__node]
                 ##REMOVE ROW FROM MASS MATRIX##################################
-                del self.m_mass[__node]
+                del self.massMatrix[__node]
                 ##ADDITIONAL OPERATIONS########################################
-                for i in range(len(self.v_load[0])):
-                    for j in range(self.phymed.time_steps):
-                        self.v_load[j][i]-=self.m_stiffness[i][__node]*\
-                        self.phymed.bc_d[k][1]*uF
+                for i in range(len(self.loadVector[0])):
+                    for j in range(self.phyMed.timeSteps):
+                        self.loadVector[j][i]-=self.stiffnessMatrix[i][__node]*\
+                        self.phyMed.bc_d[k][1]*uF
                     ###REMOVE COLUMN FROM STIFFNESS MATRIX#####################
-                    del self.m_stiffness[i][__node]
+                    del self.stiffnessMatrix[i][__node]
                     ##REMOVE COLUMN FROM MASS MATRIX###########################
-                    del self.m_mass[i][__node]
+                    del self.massMatrix[i][__node]
                 __counter+=1
         #Transient-state#######################################################
     ##APPLY DIRICHLET BC's#####################################################
@@ -679,21 +669,21 @@ class fem:
             uF=(aux_f.unitDict[self.config['length'].lower()])/(aux_f.unitDict[self.config['head'].lower()]) #Get conversion factor            
         #UNIT CONVERSION#######################################################
         #Steady-state##########################################################
-        if self.phymed.steady==True:
-            for k in range(len(self.phymed.bc_n)):
-                __l=((self.mesh.m_p[self.phymed.bc_n[k][1]][0]-self.mesh.m_p[self.phymed.bc_n[k][0]][0])**2+\
-                     (self.mesh.m_p[self.phymed.bc_n[k][1]][1]-self.mesh.m_p[self.phymed.bc_n[k][0]][1])**2)**0.5
-                self.v_load[self.phymed.bc_n[k][0]]+=self.phymed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2
-                self.v_load[self.phymed.bc_n[k][1]]+=self.phymed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2
+        if self.phyMed.steady==True:
+            for k in range(len(self.phyMed.bc_n)):
+                __l=((self.mesh.pointMatrix[self.phyMed.bc_n[k][1]][0]-self.mesh.pointMatrix[self.phyMed.bc_n[k][0]][0])**2+\
+                     (self.mesh.pointMatrix[self.phyMed.bc_n[k][1]][1]-self.mesh.pointMatrix[self.phyMed.bc_n[k][0]][1])**2)**0.5
+                self.loadVector[self.phyMed.bc_n[k][0]]+=self.phyMed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2
+                self.loadVector[self.phyMed.bc_n[k][1]]+=self.phyMed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2
         #Steady-state##########################################################
         #Transient-state#######################################################
         else: #Transient-state
-            for k in range(len(self.phymed.bc_n)):
-                __l=((self.mesh.m_p[self.phymed.bc_n[k][1]][0]-self.mesh.m_p[self.phymed.bc_n[k][0]][0])**2+\
-                     (self.mesh.m_p[self.phymed.bc_n[k][1]][1]-self.mesh.m_p[self.phymed.bc_n[k][0]][1])**2)**0.5
-                for i in range(self.phymed.time_steps):
-                    self.v_load[i][self.phymed.bc_n[k][0]]+=self.phymed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2 #RECORDATORIO: AGREGAR PASO TEMPORAL UNA VEZ QUE EL MÉTODO FUNCIONE
-                    self.v_load[i][self.phymed.bc_n[k][1]]+=self.phymed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2 #RECORDATORIO: AGREGAR PASO TEMPORAL UNA VEZ QUE EL MÉTODO FUNCIONE
+            for k in range(len(self.phyMed.bc_n)):
+                __l=((self.mesh.pointMatrix[self.phyMed.bc_n[k][1]][0]-self.mesh.pointMatrix[self.phyMed.bc_n[k][0]][0])**2+\
+                     (self.mesh.pointMatrix[self.phyMed.bc_n[k][1]][1]-self.mesh.pointMatrix[self.phyMed.bc_n[k][0]][1])**2)**0.5
+                for i in range(self.phyMed.timeSteps):
+                    self.loadVector[i][self.phyMed.bc_n[k][0]]+=self.phyMed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2 #RECORDATORIO: AGREGAR PASO TEMPORAL UNA VEZ QUE EL MÉTODO FUNCIONE
+                    self.loadVector[i][self.phyMed.bc_n[k][1]]+=self.phyMed.bc_n[k][2]*__l*self.config['aq_thickness']*uF/2 #RECORDATORIO: AGREGAR PASO TEMPORAL UNA VEZ QUE EL MÉTODO FUNCIONE
         #Transient-state#######################################################
     ##APPLY NEUMANN BC's#######################################################
     
@@ -702,19 +692,19 @@ class fem:
         #UNIT CONVERSION#######################################################
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
             uF=aux_f.unitDict[self.config['head'].lower()]/aux_f.unitDict[self.config['length'].lower()] #Get conversion factor
-            for i in range(len(self.phymed.hh_n)):
-                self.phymed.hh_n[i]*=uF
+            for i in range(len(self.phyMed.h_n)):
+                self.phyMed.h_n[i]*=uF
         #UNIT CONVERSION#######################################################
         #Sort the 'bc_d' array for an easier time 'restoring' nodes.
-        self.phymed.bc_d.sort()
+        self.phyMed.bc_d.sort()
         ##ADD BACK THE DIRICHLET BC'S##########################################
-        if self.phymed.steady==True: #Steady-state
-            for i in range(len(self.phymed.bc_d)):
-                self.phymed.hh_n.insert(self.phymed.bc_d[i][0],self.phymed.bc_d[i][1])
+        if self.phyMed.steady==True: #Steady-state
+            for i in range(len(self.phyMed.bc_d)):
+                self.phyMed.h_n.insert(self.phyMed.bc_d[i][0],self.phyMed.bc_d[i][1])
         else: #Transient-state
-            for k in range(self.phymed.time_steps):
-                for i in range(len(self.phymed.bc_d)):
-                    self.phymed.hh_n[k].insert(self.phymed.bc_d[i][0],self.phymed.bc_d[i][1])
+            for k in range(self.phyMed.timeSteps):
+                for i in range(len(self.phyMed.bc_d)):
+                    self.phyMed.h_n[k].insert(self.phyMed.bc_d[i][0],self.phyMed.bc_d[i][1])
         ##ADD BACK THE DIRICHLET BC'S##########################################
     ##REBUILD HH ARRAY#########################################################  
 ###############################################################################
@@ -736,44 +726,44 @@ class fem:
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
         __element=self.mesh.coord2element(__f['x'],__f['y'])
         #Retrieve nodes for interpolation
-        __n1=self.mesh.m_c[__element][0] #Node 1 index
-        __n2=self.mesh.m_c[__element][1] #Node 2 index
-        __n3=self.mesh.m_c[__element][2] #Node 3 index
+        __n1=self.mesh.cMatrix[__element][0] #Node 1 index
+        __n2=self.mesh.cMatrix[__element][1] #Node 2 index
+        __n3=self.mesh.cMatrix[__element][2] #Node 3 index
         ##GET INTERPOLATION ELEMENT########################
         ##GET NATURAL SYSTEM VALUES########################
-        __x21=self.mesh.m_p[__n2][0]-self.mesh.m_p[__n1][0]
-        __y21=self.mesh.m_p[__n2][1]-self.mesh.m_p[__n1][1]
-        __x31=self.mesh.m_p[__n3][0]-self.mesh.m_p[__n1][0]
-        __y31=self.mesh.m_p[__n3][1]-self.mesh.m_p[__n1][1]
-        __xi=(__y31*(__f['x']-self.mesh.m_p[__n1][0])-__x31*(__f['y']-self.mesh.m_p[__n1][1]))/\
+        __x21=self.mesh.pointMatrix[__n2][0]-self.mesh.pointMatrix[__n1][0]
+        __y21=self.mesh.pointMatrix[__n2][1]-self.mesh.pointMatrix[__n1][1]
+        __x31=self.mesh.pointMatrix[__n3][0]-self.mesh.pointMatrix[__n1][0]
+        __y31=self.mesh.pointMatrix[__n3][1]-self.mesh.pointMatrix[__n1][1]
+        __xi=(__y31*(__f['x']-self.mesh.pointMatrix[__n1][0])-__x31*(__f['y']-self.mesh.pointMatrix[__n1][1]))/\
         (__x21*__y31-__x31*__y21)
-        __eta=(-__y21*(__f['x']-self.mesh.m_p[__n1][0])+__x21*(__f['y']-self.mesh.m_p[__n1][1]))/\
+        __eta=(-__y21*(__f['x']-self.mesh.pointMatrix[__n1][0])+__x21*(__f['y']-self.mesh.pointMatrix[__n1][1]))/\
         (__x21*__y31-__x31*__y21)
         __N=[1-__xi-__eta,__xi,__eta]
         ##GET NATURAL SYSTEM VALUES########################
         ##COMPUTE DRAWDOWN VALUES##########################
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
-        if self.phymed.steady==True: #Steady-state
+        if self.phyMed.steady==True: #Steady-state
             for i in range(3):
-                self.phymed.q[self.mesh.m_c[__element][i]]=-__f['rate']*__N[i]*uF/\
+                self.phyMed.q[self.mesh.cMatrix[__element][i]]=-__f['rate']*__N[i]*uF/\
                 (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
             for i in range(__n):
                 #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
                 #IDENTIFY 'k_min'
-                for k in range(self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][0]:
+                for k in range(self.phyMed.timeSteps):
+                    if k*self.phyMed.dt>=__f['rate'][i][0]:
                         t_min=k
                         break
                 #IDENTIFY 'k_max'
-                for k in range(t_min,self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][1]:
+                for k in range(t_min,self.phyMed.timeSteps):
+                    if k*self.phyMed.dt>=__f['rate'][i][1]:
                         t_max=k+1
                         break
                 for j in range(3):
                     for k in range(t_min,t_max):
-                        self.phymed.q[self.mesh.m_c[__element][j]][k]=-__f['rate'][i][2]*__N[j]*uF/\
+                        self.phyMed.q[self.mesh.cMatrix[__element][j]][k]=-__f['rate'][i][2]*__N[j]*uF/\
                         (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
 
     def addWell_onElement(self,file): #Add well as constant function over an element
@@ -787,27 +777,27 @@ class fem:
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
         __element=self.mesh.coord2element(__f['x'],__f['y'])
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
-        if self.phymed.steady==True: #Steady-state
+        if self.phyMed.steady==True: #Steady-state
             for i in range(3):
-                self.phymed.q[self.mesh.m_c[__element][i]]=-__f['rate']*uF/\
+                self.phyMed.q[self.mesh.cMatrix[__element][i]]=-__f['rate']*uF/\
                 (3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
             for i in range(__n):
                 #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
                 #IDENTIFY 'k_min'
-                for k in range(self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][0]:
+                for k in range(self.phyMed.timeSteps):
+                    if k*self.phyMed.dt>=__f['rate'][i][0]:
                         t_min=k
                         break
                 #IDENTIFY 'k_max'
-                for k in range(t_min,self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][1]:
+                for k in range(t_min,self.phyMed.timeSteps):
+                    if k*self.phyMed.dt>=__f['rate'][i][1]:
                         t_max=k+1
                         break
                 for j in range(3):
                     for k in range(t_min,t_max):
-                        self.phymed.q[self.mesh.m_c[__element][j]][k]=-__f['rate'][i][2]*uF/(3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                        self.phyMed.q[self.mesh.cMatrix[__element][j]][k]=-__f['rate'][i][2]*uF/(3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
                         
     def addWell_onNode(self,file): #Add well as a point source over a node
         #UNIT CONVERSION#######################################################
@@ -820,160 +810,156 @@ class fem:
         ##RETRIEVE WELL INFORMATION FROM FILE##################################
         __node=self.mesh.coord2node(__f['x'],__f['y'])
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
-        if self.phymed.steady==True: #Steady-state
+        if self.phyMed.steady==True: #Steady-state
             for i in range(3):
-                self.phymed.q[__node]=-__f['rate']*uF/\
+                self.phyMed.q[__node]=-__f['rate']*uF/\
                 (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
             for i in range(__n):
                 #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
                 #IDENTIFY 'k_min'
-                for k in range(self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][0]:
+                for k in range(self.phyMed.timeSteps):
+                    if k*self.phyMed.dt>=__f['rate'][i][0]:
                         t_min=k
                         break
                 #IDENTIFY 'k_max'
-                for k in range(t_min,self.phymed.time_steps):
-                    if k*self.phymed.dt>=__f['rate'][i][1]:
+                for k in range(t_min,self.phyMed.timeSteps):
+                    if k*self.phyMed.dt>=__f['rate'][i][1]:
                         t_max=k+1
                         break
                 for j in range(3):
                     for k in range(t_min,t_max):
-                        self.phymed.q[__node][k]=-__f['rate'][i][2]*uF/(self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                        self.phyMed.q[__node][k]=-__f['rate'][i][2]*uF/(self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
     
-    def addWell_asnbc(self):
+    def addWell_asBC(self):
         #UNIT CONVERSION#######################################################
         uF=1
         if self.config['length'].lower()!=self.config['head'].lower(): #Check if conversion is required
             uF=(aux_f.unitDict[self.config['length'].lower()]**3)/(aux_f.unitDict[self.config['head'].lower()]**3) #Get conversion factor            
         #UNIT CONVERSION#######################################################
-        if self.phymed.steady==True: #Steady-state
-            for k in range(len(self.phymed.well_asbcn)):
-                __l=((self.mesh.m_p[self.phymed.well_asbcn[k][1]][0]-self.mesh.m_p[self.phymed.well_asbcn[k][0]][0])**2+\
-                     (self.mesh.m_p[self.phymed.well_asbcn[k][1]][1]-self.mesh.m_p[self.phymed.well_asbcn[k][0]][1])**2)**0.5
-                self.phymed.q[self.phymed.well_asbcn[k][0]]-=self.phymed.well_asbcn[k][2]*__l*uF/(2*self.config['aq_thickness'])
-                self.phymed.q[self.phymed.well_asbcn[k][1]]-=self.phymed.well_asbcn[k][2]*__l*uF/(2*self.config['aq_thickness'])
+        if self.phyMed.steady==True: #Steady-state
+            for k in range(len(self.phyMed.well_asBC)):
+                __l=((self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][0]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][0])**2+\
+                     (self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][1]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][1])**2)**0.5
+                self.phyMed.q[self.phyMed.well_asBC[k][0]]-=self.phyMed.well_asBC[k][2]*__l*uF/(2*self.config['aq_thickness'])
+                self.phyMed.q[self.phyMed.well_asBC[k][1]]-=self.phyMed.well_asBC[k][2]*__l*uF/(2*self.config['aq_thickness'])
         else: #Transient-state
-            for k in range(len(self.phymed.well_asbcn)):
-                __l=((self.mesh.m_p[self.phymed.well_asbcn[k][1]][0]-self.mesh.m_p[self.phymed.well_asbcn[k][0]][0])**2+\
-                     (self.mesh.m_p[self.phymed.well_asbcn[k][1]][1]-self.mesh.m_p[self.phymed.well_asbcn[k][0]][1])**2)**0.5
-                __n=self.phymed.well_asbcn[k][2]
-                __v=self.phymed.well_asbcn[k][3]
+            for k in range(len(self.phyMed.well_asBC)):
+                __l=((self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][0]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][0])**2+\
+                     (self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][1]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][1])**2)**0.5
+                __n=self.phyMed.well_asBC[k][2]
+                __v=self.phyMed.well_asBC[k][3]
                 #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
                 for i in range(__n):
                     #IDENTIFY 'k_min'
-                    for j in range(self.phymed.time_steps):
-                        if j*self.phymed.dt>=__v[i][0]:
+                    for j in range(self.phyMed.timeSteps):
+                        if j*self.phyMed.dt>=__v[i][0]:
                             t_min=j
                             break
                     #IDENTIFY 'k_max'
-                    for j in range(t_min,self.phymed.time_steps):
-                        if j*self.phymed.dt>=__v[i][1]:
+                    for j in range(t_min,self.phyMed.timeSteps):
+                        if j*self.phyMed.dt>=__v[i][1]:
                             t_max=j+1
                             break
                     for t in range(t_min,t_max):
-                        self.phymed.q[self.phymed.well_asbcn[k][0]][t]-=__v[i][2]*__l*uF/(2*self.config['aq_thickness'])
-                        self.phymed.q[self.phymed.well_asbcn[k][1]][t]-=__v[i][2]*__l*uF/(2*self.config['aq_thickness'])
+                        self.phyMed.q[self.phyMed.well_asBC[k][0]][t]-=__v[i][2]*__l*uF/(2*self.config['aq_thickness'])
+                        self.phyMed.q[self.phyMed.well_asBC[k][1]][t]-=__v[i][2]*__l*uF/(2*self.config['aq_thickness'])
     ##ADD WELLS################################################################
     
     #ZONE RELATED FUNCTIONS####################################################
     ##DEFINE NEW ZONE##########################################################
     def newZone(self,zone_id,Ss:float,Kx:float,Ky:float,x_min:float,x_max:float,y_min:float,y_max:float): #Defines a new zone in the domain as a rectangle
-        if zone_id not in self.phymed.zones: #CHECK IF THE ZONE EXISTS
+        if zone_id not in self.phyMed.zones: #CHECK IF THE ZONE EXISTS
             #IDENTIFY ALL ELEMENTS INSIDE THE ZONE#############################
             __ID=list() #Auxiliar list for storing the ID values of the elements inside the zone
-            for i in range(self.mesh.n_e):
+            for i in range(self.mesh.nElements):
                 #Get element centroid
-                __cx=(self.mesh.m_p[self.mesh.m_c[i][0]][0]+\
-                      self.mesh.m_p[self.mesh.m_c[i][1]][0]+\
-                      self.mesh.m_p[self.mesh.m_c[i][2]][0])/3
-                __cy=(self.mesh.m_p[self.mesh.m_c[i][0]][1]+\
-                      self.mesh.m_p[self.mesh.m_c[i][1]][1]+\
-                      self.mesh.m_p[self.mesh.m_c[i][2]][1])/3
+                __cx=(self.mesh.pointMatrix[self.mesh.cMatrix[i][0]][0]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][1]][0]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][2]][0])/3
+                __cy=(self.mesh.pointMatrix[self.mesh.cMatrix[i][0]][1]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][1]][1]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][2]][1])/3
                 if x_min<=__cx<=x_max and y_min<=__cy<=y_max:
                     __ID.append(i)
             #IDENTIFY ALL ELEMENTS INSIDE THE ZONE#############################
             #ZONE ASSIGNATION LOOP#############################################
             for i in __ID:
-                self.phymed.k_e[i]=[Kx,Ky]
-                self.phymed.ss_e[i]=Ss
+                #Assign zone values
+                self.phyMed.k_e[i]=[Kx,Ky]
+                self.phyMed.ss_e[i]=Ss
                 #Look for the element in all other zones and remove it from their lists
-                for k in self.phymed.zones:
-                    if i in self.phymed.zones[k]['elements']: #Check if node is in a zone 'k'
-                        __e_ID=self.phymed.zones[k]['elements'].index(i) #Get ID within 'nodes' list
-                        del self.phymed.zones[k]['elements'][__e_ID] #Remove node from zone 'k'
-            self.phymed.zones[zone_id]={'Ss':Ss,
+                for k in self.phyMed.zones:
+                    if i in self.phyMed.zones[k]['elements']: #Check if node is in a zone 'k'
+                        __e_ID=self.phyMed.zones[k]['elements'].index(i) #Get ID within 'nodes' list
+                        del self.phyMed.zones[k]['elements'][__e_ID] #Remove node from zone 'k'
+            self.phyMed.zones[zone_id]={'Ss':Ss,
                              'Kx':Kx,
                              'Ky':Ky,
                              'elements':__ID}
             #ZONE ASSIGNATION LOOP#############################################
-            del zone_id,Ss,Kx,Ky,x_min,x_max,y_min,y_max,__cx,__cy,__e_ID,__ID
         else:
             print('Zone {0} already exists'.format(zone_id))
-            del zone_id,Ss,Kx,Ky,x_min,x_max,y_min,y_max
     ##DEFINE NEW ZONE##########################################################
     
     ##APPEND NEW RECTANGLE TO EXISTING ZONE####################################
     def expandZone(self,zone_id,x_min:float,x_max:float,y_min:float,y_max:float): #Adds a new rectangle to an existing zone
-        if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
+        if zone_id in self.phyMed.zones: #CHECK IF THE ZONE EXISTS
             #IDENTIFY ALL ELEMENTS INSIDE THE ZONE#############################
             __ID=list() #Auxiliar list for storing the ID values of the elements inside the zone
-            for i in range(self.mesh.n_e):
+            for i in range(self.mesh.nElements):
                 #Get element centroid
-                __cx=(self.mesh.m_p[self.mesh.m_c[i][0]][0]+\
-                      self.mesh.m_p[self.mesh.m_c[i][1]][0]+\
-                      self.mesh.m_p[self.mesh.m_c[i][2]][0])/3
-                __cy=(self.mesh.m_p[self.mesh.m_c[i][0]][1]+\
-                      self.mesh.m_p[self.mesh.m_c[i][1]][1]+\
-                      self.mesh.m_p[self.mesh.m_c[i][2]][1])/3
+                __cx=(self.mesh.pointMatrix[self.mesh.cMatrix[i][0]][0]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][1]][0]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][2]][0])/3
+                __cy=(self.mesh.pointMatrix[self.mesh.cMatrix[i][0]][1]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][1]][1]+\
+                      self.mesh.pointMatrix[self.mesh.cMatrix[i][2]][1])/3
                 if x_min<=__cx<=x_max and y_min<=__cy<=y_max:
                     __ID.append(i)
             #IDENTIFY ALL ELEMENTS INSIDE THE ZONE#############################
             #ZONE ASSIGNATION LOOP#############################################
             for i in __ID:
+                #Assign zone values
+                self.phyMed.k_e[i]=[self.phyMed.zones[zone_id]['Kx'],self.phyMed.zones[zone_id]['Ky']]
+                self.phyMed.ss_e[i]=self.phyMed.zones[zone_id]['Ss']
                 #Look for the element in all other zones and remove it from their lists
-                for k in self.phymed.zones:
-                    if i in self.phymed.zones[k]['elements']: #Check if node is in a zone 'k'
-                        __e_ID=self.phymed.zones[k]['elements'].index(i) #Get ID within 'nodes' list
-                        del self.phymed.zones[k]['elements'][__e_ID] #Remove node from zone 'k'
+                for k in self.phyMed.zones:
+                    if i in self.phyMed.zones[k]['elements']: #Check if node is in a zone 'k'
+                        __e_ID=self.phyMed.zones[k]['elements'].index(i) #Get ID within 'nodes' list
+                        del self.phyMed.zones[k]['elements'][__e_ID] #Remove node from zone 'k'
                 #Add elements to zone
-                if i not in self.phymed.zones[zone_id]['elements']:
-                    self.phymed.zones[zone_id]['elements'].append(i)
-            self.updateZone(zone_id,self.phymed.zones[zone_id]['Ss'],self.phymed.zones[zone_id]['Kx'],self.phymed.zones[zone_id]['Ky'])
+                if i not in self.phyMed.zones[zone_id]['elements']:
+                    self.phyMed.zones[zone_id]['elements'].append(i)
             #ZONE ASSIGNATION LOOP#############################################
-            del zone_id,x_min,x_max,y_min,y_max,__cx,__cy,__e_ID,__ID
         else:
             print("Zone {0} doesn't exist".format(zone_id))
-            del zone_id,x_min,x_max,y_min,y_max
     ##APPEND NEW RECTANGLE TO EXISTING ZONE####################################
     
     ##UPDATE ZONE PARAMETERS###################################################
     def updateZone(self,zone_id,Ss:float,Kx:float,Ky:float): #Update zone properties
-        if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
-            self.phymed.zones[zone_id]['Ss']=Ss #Update Specific Storage value
-            self.phymed.zones[zone_id]['Kx']=Kx #Update Kx value
-            self.phymed.zones[zone_id]['Ky']=Ky #Update Ky value
-            for i in self.phymed.zones[zone_id]['elements']:
-                self.phymed.k_e[i]=[Kx,Ky] #Update element value
-                self.phymed.ss_e[i]=Ss #Update element value
-            del zone_id,Ss,Kx,Ky
+        if zone_id in self.phyMed.zones: #CHECK IF THE ZONE EXISTS
+            self.phyMed.zones[zone_id]['Ss']=Ss #Update Specific Storage value
+            self.phyMed.zones[zone_id]['Kx']=Kx #Update Kx value
+            self.phyMed.zones[zone_id]['Ky']=Ky #Update Ky value
+            for i in self.phyMed.zones[zone_id]['elements']:
+                self.phyMed.k_e[i]=[Kx,Ky] #Update element value
+                self.phyMed.ss_e[i]=Ss #Update element value
         else:
             print("Zone {0} doesn't exist".format(zone_id))
-            del zone_id,Ss,Kx,Ky
     ##UPDATE ZONE PARAMETERS###################################################
     
     ##DELETE ZONE##############################################################
     def deleteZone(self,zone_id):
-        if zone_id in self.phymed.zones: #CHECK IF THE ZONE EXISTS
-            for i in self.phymed.zones[zone_id]['elements']:
-                self.phymed.zones[0]['elements'].append(i) #Add element to default zone
-                self.phymed.k_e[i]=[self.phymed.zones[0]['Kx'],self.phymed.zones[0]['Ky']] #Update element value
-                self.phymed.ss_e[i]=self.phymed.zones[0]['Ss'] #Update element value
-            del self.phymed.zones[zone_id],zone_id
+        if zone_id in self.phyMed.zones: #CHECK IF THE ZONE EXISTS
+            for i in self.phyMed.zones[zone_id]['elements']:
+                self.phyMed.zones[0]['elements'].append(i) #Add element to default zone
+                self.phyMed.k_e[i]=[self.phyMed.zones[0]['Kx'],self.phyMed.zones[0]['Ky']] #Update element value
+                self.phyMed.ss_e[i]=self.phyMed.zones[0]['Ss'] #Update element value
+            del self.phyMed.zones[zone_id]
         else:
             print("Zone {0} doesn't exist".format(zone_id))
-            del zone_id
     ##DELETE ZONE##############################################################
     #ZONE RELATED FUNCTIONS####################################################
 ###############################################################################
@@ -985,7 +971,7 @@ class fem:
 ###############################################################################
     #SOLVE LINEAR SYSTEM#######################################################
     def solve(self):
-        if self.phymed.steady==True: #Steady-state
+        if self.phyMed.steady==True: #Steady-state
             print('ASSEMBLING GLOBAL MATRICES...')
             ##ASSEMBLE GLOBAL MATRICES#########################################
             self.__assembleStiffnessMatrix() #ASSEMBLE STIFFNESS MATRIX
@@ -1000,8 +986,8 @@ class fem:
             
             print('COMPUTING HYDRAULIC HEAD DISTRIBUTION...')
             ##GET HYDRAULIC HEAD DISTRIBUTION##################################    
-            __aux_hh=np.matmul(np.linalg.inv(self.m_stiffness),self.v_load)
-            self.phymed.hh_n=__aux_hh.tolist()
+            __aux_hh=np.matmul(np.linalg.inv(self.stiffnessMatrix),self.loadVector)
+            self.phyMed.h_n=__aux_hh.tolist()
             self.__rebuild_h()
             ##GET HYDRAULIC HEAD DISTRIBUTION##################################
         else: #Transient-state
@@ -1022,38 +1008,38 @@ class fem:
             ##GET AUXILIAR MATRICES############################################
             ##__A=MASS+STIFFNESS*dt
             ###INITIALIZE ARRAY
-            __n_n=len(self.m_mass)
-            __A=[0]*__n_n
-            for i in range(__n_n):
-                __A[i]=[0]*__n_n
+            __nNodes=len(self.massMatrix)
+            __A=[0]*__nNodes
+            for i in range(__nNodes):
+                __A[i]=[0]*__nNodes
             ###ASSIGN VALUES
             #DIVIDE MASS MATRIX BY DT
-            for i in range(__n_n):
-                for j in range(__n_n):
-                    self.m_mass[i][j]/=self.phymed.dt
-            for i in range(__n_n):
-                for j in range(__n_n):
-                    __A[i][j]=self.m_mass[i][j]+self.m_stiffness[i][j]#*self.phymed.dt
+            for i in range(__nNodes):
+                for j in range(__nNodes):
+                    self.massMatrix[i][j]/=self.phyMed.dt
+            for i in range(__nNodes):
+                for j in range(__nNodes):
+                    __A[i][j]=self.massMatrix[i][j]+self.stiffnessMatrix[i][j]#*self.phyMed.dt
             __Ainv=np.linalg.inv(__A)
             ##__V=LOAD*dt+MASS*hh_t-1
             ###INITIALIZE ARRAY
-            __V=[0]*self.phymed.time_steps
-            for i in range(self.phymed.time_steps):
-                __V[i]=[0]*__n_n
+            __V=[0]*self.phyMed.timeSteps
+            for i in range(self.phyMed.timeSteps):
+                __V[i]=[0]*__nNodes
             ###ASSIGN VALUES
-            for i in range(self.phymed.time_steps):
-                for j in range(__n_n):
-                        __V[i][j]=self.v_load[i][j]#*self.phymed.dt
+            for i in range(self.phyMed.timeSteps):
+                for j in range(__nNodes):
+                        __V[i][j]=self.loadVector[i][j]#*self.phyMed.dt
             ##GET AUXILIAR MATRICES############################################
             
             print('SOLVING FOR EACH TIME STEP...')
-            for k in range(self.phymed.time_steps-1): #TIME-LOOP
+            for k in range(self.phyMed.timeSteps-1): #TIME-LOOP
                 __step=k+1
-                print(str(100*__step/self.phymed.time_steps)+'%...')
+                print(str(100*__step/self.phyMed.timeSteps)+'%...')
                 
                 ##UPDATE AUXILIAR MATRICES#####################################
-                __M=np.matmul(self.m_mass,self.phymed.hh_n[__step-1])
-                for i in range(__n_n):
+                __M=np.matmul(self.massMatrix,self.phyMed.h_n[__step-1])
+                for i in range(__nNodes):
                     __V[__step][i]+=__M[i]
                 ##UPDATE AUXILIAR MATRICES#####################################
                 
@@ -1061,7 +1047,7 @@ class fem:
                 ###CORREGIR
                 print('COMPUTING HYDRAULIC HEAD DISTRIBUTION...')
                 __aux_hh=np.matmul(__Ainv,__V[__step])
-                self.phymed.hh_n[__step]=__aux_hh.tolist()
+                self.phyMed.h_n[__step]=__aux_hh.tolist()
                 ##GET HYDRAULIC HEAD DISTRIBUTION##############################
             ###HH VALUES#######################################################
             self.__rebuild_h()
@@ -1096,17 +1082,17 @@ class fem:
             __f.write('{0}\n'.format(3)) #Three integer tags:
             __f.write('{0}\n'.format(0)) #Current step
             __f.write('{0}\n'.format(1)) #Scalar field
-            __f.write('{0}\n'.format(self.mesh.n_n)) #Number of nodes
-            for i in range(self.mesh.n_n):
-                __f.write('{0} {1}\n'.format(i+1,self.phymed.hh_n[i]) )
+            __f.write('{0}\n'.format(self.mesh.nNodes)) #Number of nodes
+            for i in range(self.mesh.nNodes):
+                __f.write('{0} {1}\n'.format(i+1,self.phyMed.h_n[i]) )
         else:
-            __f.write('{0:16f}\n'.format(step*self.phymed.dt)) #Simulation time = step * dt
+            __f.write('{0:16f}\n'.format(step*self.phyMed.dt)) #Simulation time = step * dt
             __f.write('{0}\n'.format(3)) #Three integer tags:
             __f.write('{0}\n'.format(step)) #Current step
             __f.write('{0}\n'.format(1)) #Scalar field
-            __f.write('{0}\n'.format(self.mesh.n_n)) #Number of nodes
-            for i in range(self.mesh.n_n):
-                __f.write('{0} {1}\n'.format(i+1,self.phymed.hh_n[step][i]) )
+            __f.write('{0}\n'.format(self.mesh.nNodes)) #Number of nodes
+            for i in range(self.mesh.nNodes):
+                __f.write('{0} {1}\n'.format(i+1,self.phyMed.h_n[step][i]) )
         __f.write('$EndNodeData')
         #LOOP FOR WRITING VALUES ON THE FILE###################################
         __fOrig.close()
@@ -1119,30 +1105,30 @@ class fem:
         ##GET INTERPOLATION ELEMENT########################
         __n=self.mesh.coord2element(x,y) #Get element ID
         #Retrieve nodes for interpolation
-        __n1=self.mesh.m_c[__n][0] #Node 1 index
-        __n2=self.mesh.m_c[__n][1] #Node 2 index
-        __n3=self.mesh.m_c[__n][2] #Node 3 index
+        __n1=self.mesh.cMatrix[__n][0] #Node 1 index
+        __n2=self.mesh.cMatrix[__n][1] #Node 2 index
+        __n3=self.mesh.cMatrix[__n][2] #Node 3 index
         ##GET INTERPOLATION ELEMENT########################
         ##GET NATURAL SYSTEM VALUES########################
-        __x21=self.mesh.m_p[__n2][0]-self.mesh.m_p[__n1][0]
-        __y21=self.mesh.m_p[__n2][1]-self.mesh.m_p[__n1][1]
-        __x31=self.mesh.m_p[__n3][0]-self.mesh.m_p[__n1][0]
-        __y31=self.mesh.m_p[__n3][1]-self.mesh.m_p[__n1][1]
-        __xi=(__y31*(x-self.mesh.m_p[__n1][0])-__x31*(y-self.mesh.m_p[__n1][1]))/\
+        __x21=self.mesh.pointMatrix[__n2][0]-self.mesh.pointMatrix[__n1][0]
+        __y21=self.mesh.pointMatrix[__n2][1]-self.mesh.pointMatrix[__n1][1]
+        __x31=self.mesh.pointMatrix[__n3][0]-self.mesh.pointMatrix[__n1][0]
+        __y31=self.mesh.pointMatrix[__n3][1]-self.mesh.pointMatrix[__n1][1]
+        __xi=(__y31*(x-self.mesh.pointMatrix[__n1][0])-__x31*(y-self.mesh.pointMatrix[__n1][1]))/\
         (__x21*__y31-__x31*__y21)
-        __eta=(-__y21*(x-self.mesh.m_p[__n1][0])+__x21*(y-self.mesh.m_p[__n1][1]))/\
+        __eta=(-__y21*(x-self.mesh.pointMatrix[__n1][0])+__x21*(y-self.mesh.pointMatrix[__n1][1]))/\
         (__x21*__y31-__x31*__y21)
         __N1=1-__xi-__eta
         __N2=__xi
         __N3=__eta
         ##GET NATURAL SYSTEM VALUES########################
         ##COMPUTE DRAWDOWN VALUES##########################
-        __h=[0]*self.phymed.time_steps #Auxiliar array to store head values
-        drawdown=[0]*self.phymed.time_steps #Initialize array
-        for k in range(self.phymed.time_steps):
-            __h[k]=self.phymed.hh_n[k][__n1]*__N1+\
-            self.phymed.hh_n[k][__n2]*__N2+\
-            self.phymed.hh_n[k][__n3]*__N3
+        __h=[0]*self.phyMed.timeSteps #Auxiliar array to store head values
+        drawdown=[0]*self.phyMed.timeSteps #Initialize array
+        for k in range(self.phyMed.timeSteps):
+            __h[k]=self.phyMed.h_n[k][__n1]*__N1+\
+            self.phyMed.h_n[k][__n2]*__N2+\
+            self.phyMed.h_n[k][__n3]*__N3
             drawdown[k]=__h[0]-__h[k]
         ##COMPUTE DRAWDOWN VALUES##########################
         #COMPUTE DRAWDOWN VALUE AT X,Y#########################################
@@ -1153,15 +1139,15 @@ class fem:
             __f.write('#UNITS\n')
             __f.write(self.config['time']+','+self.config['head']+'\n') #Write model time and head units
             __f.write('#NUMBER OF TIME-STEPS\n')
-            __f.write('{0}\n'.format(self.phymed.time_steps)) #Write number of time-steps
+            __f.write('{0}\n'.format(self.phyMed.timeSteps)) #Write number of time-steps
             __f.write('#OBSERVATION POINT COORDINATES\n')
             __f.write('{0:10f} {1:10f}\n'.format(x,y)) #Write observation point intended coordinates
             __f.write('#TIME-STEP VALUES\n')
-            for i in range(self.phymed.time_steps):
-                __f.write('{0:.7E} '.format(i*self.phymed.dt))
+            for i in range(self.phyMed.timeSteps):
+                __f.write('{0:.7E} '.format(i*self.phyMed.dt))
             __f.write('\n')
             __f.write('#DRADOWN VALUES\n')
-            for i in range(self.phymed.time_steps):
+            for i in range(self.phyMed.timeSteps):
                 __f.write('{0:.7E} '.format(drawdown[i]))
             __f.close()
         return drawdown
@@ -1188,30 +1174,30 @@ class fem:
             y=obs_pts[i][1]
             __n=self.mesh.coord2element(x,y) #Get element ID
             #Retrieve nodes for interpolation
-            __n1=self.mesh.m_c[__n][0] #Node 1 index
-            __n2=self.mesh.m_c[__n][1] #Node 2 index
-            __n3=self.mesh.m_c[__n][2] #Node 3 index
+            __n1=self.mesh.cMatrix[__n][0] #Node 1 index
+            __n2=self.mesh.cMatrix[__n][1] #Node 2 index
+            __n3=self.mesh.cMatrix[__n][2] #Node 3 index
             ##GET INTERPOLATION ELEMENT########################
             ##GET NATURAL SYSTEM VALUES########################
-            __x21=self.mesh.m_p[__n2][0]-self.mesh.m_p[__n1][0]
-            __y21=self.mesh.m_p[__n2][1]-self.mesh.m_p[__n1][1]
-            __x31=self.mesh.m_p[__n3][0]-self.mesh.m_p[__n1][0]
-            __y31=self.mesh.m_p[__n3][1]-self.mesh.m_p[__n1][1]
-            __xi=(__y31*(x-self.mesh.m_p[__n1][0])-__x31*(y-self.mesh.m_p[__n1][1]))/\
+            __x21=self.mesh.pointMatrix[__n2][0]-self.mesh.pointMatrix[__n1][0]
+            __y21=self.mesh.pointMatrix[__n2][1]-self.mesh.pointMatrix[__n1][1]
+            __x31=self.mesh.pointMatrix[__n3][0]-self.mesh.pointMatrix[__n1][0]
+            __y31=self.mesh.pointMatrix[__n3][1]-self.mesh.pointMatrix[__n1][1]
+            __xi=(__y31*(x-self.mesh.pointMatrix[__n1][0])-__x31*(y-self.mesh.pointMatrix[__n1][1]))/\
             (__x21*__y31-__x31*__y21)
-            __eta=(-__y21*(x-self.mesh.m_p[__n1][0])+__x21*(y-self.mesh.m_p[__n1][1]))/\
+            __eta=(-__y21*(x-self.mesh.pointMatrix[__n1][0])+__x21*(y-self.mesh.pointMatrix[__n1][1]))/\
             (__x21*__y31-__x31*__y21)
             __N1=1-__xi-__eta
             __N2=__xi
             __N3=__eta
             ##GET NATURAL SYSTEM VALUES########################
             ##COMPUTE DRAWDOWN VALUES##########################
-            __h0=self.phymed.hh_n[0][__n1]*__N1+\
-            self.phymed.hh_n[0][__n2]*__N2+\
-            self.phymed.hh_n[0][__n3]*__N3
-            __hi=self.phymed.hh_n[step][__n1]*__N1+\
-            self.phymed.hh_n[step][__n2]*__N2+\
-            self.phymed.hh_n[step][__n3]*__N3
+            __h0=self.phyMed.h_n[0][__n1]*__N1+\
+            self.phyMed.h_n[0][__n2]*__N2+\
+            self.phyMed.h_n[0][__n3]*__N3
+            __hi=self.phyMed.h_n[step][__n1]*__N1+\
+            self.phyMed.h_n[step][__n2]*__N2+\
+            self.phyMed.h_n[step][__n3]*__N3
             drawdown[i]=__h0-__hi
             ##COMPUTE DRAWDOWN VALUES##########################
         #COMPUTE DRAWDOWN VALUE AT EACH OBSERVATION POINT######################
@@ -1241,9 +1227,9 @@ class fem:
         #WRITE AN OUTPUT FILE CONTAINING THE HYDRAULIC HEAD DISTRIBUTION#######
         __f=open(aux_f.path+'/'+file+'.hh0','w') #Open the given file in 'write' mode
         
-        __f.write(str(self.mesh.n_n)+'\n')
-        for i in range(self.mesh.n_n):
-            __f.write('{0} {1:.7E}\n'.format(i,self.phymed.hh_n[i]))
+        __f.write(str(self.mesh.nNodes)+'\n')
+        for i in range(self.mesh.nNodes):
+            __f.write('{0} {1:.7E}\n'.format(i,self.phyMed.h_n[i]))
         __f.close()
     ##AUXILIAR EXPORTATION OF INITIAL CONDITIONS###############################
 ###############################################################################

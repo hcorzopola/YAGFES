@@ -77,16 +77,16 @@ def plot_h(model,npts=21,superpose=False,step=None,lang='en'):
         x_list=np.asarray(list(list(zip(*model.mesh.m_p))[0]))
         y_list=np.asarray(list(list(zip(*model.mesh.m_p))[1]))
         if step==None:
-            z_list=np.asarray(model.phymed.hh_n)
+            z_list=np.asarray(model.phyMed.h_n)
         else:
-            z_list=np.asarray(model.phymed.hh_n[step])
+            z_list=np.asarray(model.phyMed.h_n[step])
     else:
         x_list=np.asarray(list(list(zip(*model.mesh.m_p))[0]))
         y_list=np.asarray(list(list(zip(*model.mesh.m_p))[1]))
         if step==None:
-            z_list=np.asarray(model.phymed.hh_n)
+            z_list=np.asarray(model.phyMed.h_n)
         else:
-            z_list=np.asarray(model.phymed.hh_n[step])
+            z_list=np.asarray(model.phyMed.h_n[step])
     ###INTERPOLATE DATA
     x_axis=np.linspace(min(x_list),max(x_list),npts)
     y_axis=np.linspace(min(y_list),max(y_list),npts)
