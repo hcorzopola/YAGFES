@@ -21,6 +21,6 @@
 
 name="yagfes"
 
-from yagfes import aux_f as aux
-from yagfes import fdm_m as fdm
-from yagfes import fem_m as fem
+from . import aux_f as aux
+from . import fdm_m as fdm
+from . import fem_m as fem

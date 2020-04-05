@@ -55,8 +55,8 @@ class mesh:
         self.dy=__f['dy']
         self.ny=round((__f['max_y']-__f['min_y'])/self.dy)+1
         ###MESH COORDINATES####################################################
-        __nNodes=self.nx*self.ny
-        self.pointMatrix=[0]*__nNodes #Initialize the array containing the node coordinates
+        self.nNodes=self.nx*self.ny
+        self.pointMatrix=[0]*self.nNodes #Initialize the array containing the node coordinates
         ########################
         for i in range(self.nx):
             for j in range(self.ny):
@@ -65,8 +65,8 @@ class mesh:
         ##BUILD MESH###########################################################
         ##INITIALIZE AUXILIAR ARRAY TO KEEP TRACK OF NODE ID's#################
         ##CREATE AUXILIAR LIST TO KEEP TRACK OF ACTUAL NODE INDEXES############
-        self.ID=[0]*__nNodes
-        for i in range(__nNodes):
+        self.ID=[0]*self.nNodes
+        for i in range(self.nNodes):
             self.ID[i]=i
         #READ MESH FILE########################################################
         
@@ -339,7 +339,7 @@ class fdm:
         #READ INIT FILE########################################################
         #CREATE MESH AND PHYMED OBJECTS########################################
         self.mesh=mesh(self.config['mesh_file'])
-        self.phyMed=phymed(self.config,self.mesh.nx*self.mesh.ny)
+        self.phyMed=phymed(self.config,self.mesh.nNodes)
         #CREATE MESH AND PHYMED OBJECTS########################################
         #INITIALIZE MATRICES ARRAYS
         self.coeffMatrix=list() #INITIALIZE ARRAY FOR COEFFICIENTS MATRIX
@@ -352,10 +352,9 @@ class fdm:
     ##ASSEMBLE COEFFICIENTS MATRIX#############################################
     def __assembleCoefficientMatrix(self):
         #INITIALIZE ARRAY FOR COEFFICIENTS MATRIX
-        __nNodes=self.mesh.nx*self.mesh.ny
-        self.coeffMatrix=[0]*__nNodes
-        for i in range(__nNodes):
-            self.coeffMatrix[i]=[0]*__nNodes
+        self.coeffMatrix=[0]*self.mesh.nNodes
+        for i in range(self.mesh.nNodes):
+            self.coeffMatrix[i]=[0]*self.mesh.nNodes
         #########################################
         for j in range(self.mesh.ny):
             for i in range(self.mesh.nx):
@@ -454,13 +453,12 @@ class fdm:
     
     ##ASSEMBLE LOAD VECTOR#####################################################
     def __assembleLoadVector(self):
-        __nNodes=self.mesh.nx*self.mesh.ny
         #Steady-state##########################################################
         if self.phyMed.steady==True:
             #INITIALIZE ARRAY FOR LOAD VECTOR
-            self.loadVector=[0]*__nNodes
+            self.loadVector=[0]*self.mesh.nNodes
             #ASSIGN VALUES
-            for i in self.phymed.q:
+            for i in self.phyMed.q:
                 self.loadVector[i]=self.phyMed.q[i]
         #Steady-state##########################################################        
         #Transient-state#######################################################
@@ -468,11 +466,16 @@ class fdm:
             #INITIALIZE ARRAY FOR LOAD VECTOR
             self.loadVector=[0]*self.phyMed.timeSteps
             for i in range(self.phyMed.timeSteps):
-                self.loadVector[i]=[0]*__nNodes
+                self.loadVector[i]=[0]*self.mesh.nNodes
             #ASSIGN VALUES
             for i in self.phyMed.q:
-                for k in range(self.phyMed.timeSteps):
-                    self.loadVector[k][i]=self.phyMed.q[i][k]
+                nStressPeriods=self.phyMed.q[i][0] #number of stress periods
+                for j in range(nStressPeriods):
+                    t0=self.phyMed.q[i][1][j][0] #Start of stress period 'j'
+                    tf=self.phyMed.q[i][1][j][1] #End of stress period 'j'
+                    v=self.phyMed.q[i][1][j][2] #Pumping rate of stress period 'j'
+                    for k in range(t0,tf):
+                        self.loadVector[k][i]=v
         #Transient-state#######################################################
     ##ASSEMBLE LOAD VECTOR#####################################################
 ###############################################################################
@@ -730,14 +733,13 @@ class fdm:
         #Steady-State##########################################################
         if self.phyMed.steady==True:
             ##Re-initialize hydraulic head array###############################
-            __nNodes=self.mesh.nx*self.mesh.ny
             __n=len(self.mesh.ID)
             __hh=[0]*__n
             ###Pass values to new array########################################
             for i in range(__n):
                 __hh[i]=self.phyMed.h_n[i]
             ###Reset hydraulic head array and pass values######################
-            self.phyMed.h_n=[0]*__nNodes
+            self.phyMed.h_n=[0]*self.mesh.nNodes
             for i in range(__n):
                 self.phyMed.h_n[self.mesh.ID[i]]=__hh[i]
             ##Re-initialize hydraulic head array###############################
@@ -764,7 +766,6 @@ class fdm:
         #Steady-State##########################################################
         #Transient-State#######################################################
         else:
-            __nNodes=self.mesh.nx*self.mesh.ny
             __n=len(self.mesh.ID)
             __hh=[0]*__n
             for j in range(self.phyMed.timeSteps):
@@ -773,7 +774,7 @@ class fdm:
                 for i in range(__n):
                     __hh[i]=self.phyMed.h_n[j][i]
                 ###Reset hydraulic head array and pass values##################
-                self.phyMed.h_n[j]=[0]*__nNodes
+                self.phyMed.h_n[j]=[0]*self.mesh.nNodes
                 for i in range(__n):
                     self.phyMed.h_n[j][self.mesh.ID[i]]=__hh[i]
                 ##Re-initialize hydraulic head array###########################
@@ -819,10 +820,24 @@ class fdm:
         __node=self.mesh.coord2node(__f['x'],__f['y']) #Retrieve node indexes
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
         if self.phyMed.steady==True: #Steady-state
-            self.phyMed.q[__node]=-__f['rate']*uF/\
+            v=-__f['rate']*uF/\
             (self.mesh.dx*self.mesh.dy*self.config['aq_thickness'])/self.phyMed.ss_n[__node]
+            #Check if the node already exists in the 'q' array
+            if __node in self.phyMed.q: #Node already has a well on it
+                self.phyMed.q[__node]+=v
+            else: #New well
+                self.phyMed.q[__node]=v
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
+            offset=0
+            #Check if the node already exists in the 'q' array
+            if __node in self.phyMed.q: #Node already has a well on it
+                offset=self.phyMed.q[__node][0] #Get current number of stress periods
+                self.phyMed.q[__node][0]+=__n #Add number of stress periods to the current counter
+                for i in range(__n):
+                    self.phyMed.q[__node][1].append(0) #Add placeholders to store the new stress periods
+            else: #New well
+                self.phyMed.q[__node]=[__n,[0]*__n]
             for i in range(__n):
                 #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
                 #IDENTIFY 'k_min'
@@ -836,9 +851,11 @@ class fdm:
                         t_max=k+1
                         break
                 #ASSIGN FLOW VALUE AT INTERVAL 'i'#############################
-                for k in range(t_min,t_max):
-                    self.phyMed.q[__node][k]=-__f['rate'][i][2]*uF/\
+                v=-__f['rate'][i][2]*uF/\
                     (self.mesh.dx*self.mesh.dy*self.config['aq_thickness'])/self.phyMed.ss_n[__node]
+                self.phyMed.q[__node][1][i+offset][0]=t_min #Start of stress period 'i'
+                self.phyMed.q[__node][1][i+offset][1]=t_max #End of stress period 'i'
+                self.phyMed.q[__node][1][i+offset][2]=v #Pumping rate of stress period 'i'
     ##ADD WELLS################################################################
     
     #ZONE RELATED FUNCTIONS####################################################

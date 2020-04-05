@@ -549,10 +549,9 @@ class fem:
             #INITIALIZE ARRAY FOR LOAD VECTOR
             self.loadVector=[0]*self.mesh.nNodes
             #ASSIGN VALUES
-            for i in self.phymed.q:
-                self.loadVector[i]-=self.phyMed.q[i]
+            for i in self.phyMed.q:
+                self.loadVector[i]=-self.phyMed.q[i]
         #Steady-state##########################################################
-        
         #Transient-state#######################################################
         else:
             #INITIALIZE ARRAY FOR LOAD VECTOR
@@ -560,9 +559,14 @@ class fem:
             for i in range(self.phyMed.timeSteps):
                 self.loadVector[i]=[0]*self.mesh.nNodes
             #ASSIGN VALUES
-            for i in self.phymed.q:
-                for k in range(self.phyMed.timeSteps):
-                    self.loadVector[k][i]-=self.phyMed.q[i][k]
+            for i in self.phyMed.q:
+                nStressPeriods=self.phyMed.q[i][0] #number of stress periods
+                for j in range(nStressPeriods):
+                    t0=self.phyMed.q[i][1][j][0] #Start of stress period 'j'
+                    tf=self.phyMed.q[i][1][j][1] #End of stress period 'j'
+                    v=self.phyMed.q[i][1][j][2] #Pumping rate of stress period 'j'
+                    for k in range(t0,tf):
+                        self.loadVector[k][i]=-v
         #Transient-state#######################################################
     ##ASSEMBLE LOAD VECTOR#####################################################
     
@@ -745,8 +749,14 @@ class fem:
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
         if self.phyMed.steady==True: #Steady-state
             for i in range(3):
-                self.phyMed.q[self.mesh.cMatrix[__element][i]]=-__f['rate']*__N[i]*uF/\
-                (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                __node=self.mesh.cMatrix[__element][i]
+                v=-__f['rate']*__N[i]*uF/\
+                (self.config['aq_thickness'])
+                #Check if the node already exists in the 'q' array
+                if __node in self.phyMed.q: #Node already has a well on it
+                    self.phyMed.q[__node]+=v
+                else: #New well
+                    self.phyMed.q[__node]=v
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
             for i in range(__n):
@@ -761,10 +771,23 @@ class fem:
                     if k*self.phyMed.dt>=__f['rate'][i][1]:
                         t_max=k+1
                         break
+                #ASSIGN FLOW VALUE AT INTERVAL 'i'#############################
                 for j in range(3):
-                    for k in range(t_min,t_max):
-                        self.phyMed.q[self.mesh.cMatrix[__element][j]][k]=-__f['rate'][i][2]*__N[j]*uF/\
-                        (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                    __node=self.mesh.cMatrix[__element][j]
+                    offset=0
+                    #Check if the node already exists in the 'q' array
+                    if __node in self.phyMed.q: #Node already has a well on it
+                        offset=self.phyMed.q[__node][0] #Get current number of stress periods
+                        self.phyMed.q[__node][0]+=__n #Add number of stress periods to the current counter
+                        for i in range(__n):
+                            self.phyMed.q[__node][1].append(0) #Add placeholders to store the new stress periods
+                    else: #New well
+                        self.phyMed.q[__node]=[__n,[0]*__n]
+                    v=-__f['rate'][i][2]*__N[j]*uF/\
+                        (self.config['aq_thickness'])
+                    self.phyMed.q[__node][1][i+offset][0]=t_min #Start of stress period 'i'
+                    self.phyMed.q[__node][1][i+offset][1]=t_max #End of stress period 'i'
+                    self.phyMed.q[__node][1][i+offset][2]=v #Pumping rate of stress period 'i'
 
     def addWell_onElement(self,file): #Add well as constant function over an element
         #UNIT CONVERSION#######################################################
@@ -778,9 +801,15 @@ class fem:
         __element=self.mesh.coord2element(__f['x'],__f['y'])
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
         if self.phyMed.steady==True: #Steady-state
+            v=-__f['rate']*uF/\
+            (3*self.config['aq_thickness'])
             for i in range(3):
-                self.phyMed.q[self.mesh.cMatrix[__element][i]]=-__f['rate']*uF/\
-                (3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                __node=self.mesh.cMatrix[__element][i]
+                #Check if the node already exists in the 'q' array
+                if __node in self.phyMed.q: #Node already has a well on it
+                    self.phyMed.q[__node]+=v
+                else: #New well
+                    self.phyMed.q[__node]=v
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
             for i in range(__n):
@@ -795,9 +824,23 @@ class fem:
                     if k*self.phyMed.dt>=__f['rate'][i][1]:
                         t_max=k+1
                         break
+                #ASSIGN FLOW VALUE AT INTERVAL 'i'#############################
+                v=-__f['rate'][i][2]*uF/\
+                (3*self.config['aq_thickness'])
                 for j in range(3):
-                    for k in range(t_min,t_max):
-                        self.phyMed.q[self.mesh.cMatrix[__element][j]][k]=-__f['rate'][i][2]*uF/(3*self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                    __node=self.mesh.cMatrix[__element][j]
+                    offset=0
+                    #Check if the node already exists in the 'q' array
+                    if __node in self.phyMed.q: #Node already has a well on it
+                        offset=self.phyMed.q[__node][0] #Get current number of stress periods
+                        self.phyMed.q[__node][0]+=__n #Add number of stress periods to the current counter
+                        for i in range(__n):
+                            self.phyMed.q[__node][1].append(0) #Add placeholders to store the new stress periods
+                    else: #New well
+                        self.phyMed.q[__node]=[__n,[0]*__n]
+                    self.phyMed.q[__node][1][i+offset][0]=t_min #Start of stress period 'i'
+                    self.phyMed.q[__node][1][i+offset][1]=t_max #End of stress period 'i'
+                    self.phyMed.q[__node][1][i+offset][2]=v #Pumping rate of stress period 'i'
                         
     def addWell_onNode(self,file): #Add well as a point source over a node
         #UNIT CONVERSION#######################################################
@@ -811,11 +854,24 @@ class fem:
         __node=self.mesh.coord2node(__f['x'],__f['y'])
         ##ASSIGN FLOW VALUE TO 'Q' ARRAY#######################################
         if self.phyMed.steady==True: #Steady-state
-            for i in range(3):
-                self.phyMed.q[__node]=-__f['rate']*uF/\
-                (self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+            v=-__f['rate']*uF/\
+            (self.config['aq_thickness'])
+            #Check if the node already exists in the 'q' array
+            if __node in self.phyMed.q: #Node already has a well on it
+                self.phyMed.q[__node]+=v
+            else: #New well
+                self.phyMed.q[__node]=v
         else: #Transient-state
             __n=len(__f['rate']) #NUMBER OF PUMPING INTERVALS
+            offset=0
+            #Check if the node already exists in the 'q' array
+            if __node in self.phyMed.q: #Node already has a well on it
+                offset=self.phyMed.q[__node][0] #Get current number of stress periods
+                self.phyMed.q[__node][0]+=__n #Add number of stress periods to the current counter
+                for i in range(__n):
+                    self.phyMed.q[__node][1].append(0) #Add placeholders to store the new stress periods
+            else: #New well
+                self.phyMed.q[__node]=[__n,[0]*__n]
             for i in range(__n):
                 #IDENTIFY TIME-STEPS WITHIN THE PUMPING INTERVAL###############
                 #IDENTIFY 'k_min'
@@ -828,9 +884,12 @@ class fem:
                     if k*self.phyMed.dt>=__f['rate'][i][1]:
                         t_max=k+1
                         break
-                for j in range(3):
-                    for k in range(t_min,t_max):
-                        self.phyMed.q[__node][k]=-__f['rate'][i][2]*uF/(self.config['aq_thickness']) #RECORDATORIO:PUEDE QUE HAYA QUE DIVIDIR ENTRE EL ESPESOR DEL ACUÍFERO
+                #ASSIGN FLOW VALUE AT INTERVAL 'i'#############################
+                v=-__f['rate'][i][2]*uF/\
+                (self.config['aq_thickness'])
+                self.phyMed.q[__node][1][i+offset][0]=t_min #Start of stress period 'i'
+                self.phyMed.q[__node][1][i+offset][1]=t_max #End of stress period 'i'
+                self.phyMed.q[__node][1][i+offset][2]=v #Pumping rate of stress period 'i'
     
     def addWell_asBC(self):
         #UNIT CONVERSION#######################################################
@@ -842,8 +901,15 @@ class fem:
             for k in range(len(self.phyMed.well_asBC)):
                 __l=((self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][0]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][0])**2+\
                      (self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][1]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][1])**2)**0.5
-                self.phyMed.q[self.phyMed.well_asBC[k][0]]-=self.phyMed.well_asBC[k][2]*__l*uF/(2*self.config['aq_thickness'])
-                self.phyMed.q[self.phyMed.well_asBC[k][1]]-=self.phyMed.well_asBC[k][2]*__l*uF/(2*self.config['aq_thickness'])
+                v=-self.phyMed.well_asBC[k][2]*__l*uF/\
+                (2*self.config['aq_thickness'])
+                for i in range(2):
+                    __node=self.phyMed.well_asBC[k][i]
+                    #Check if the node already exists in the 'q' array
+                    if __node in self.phyMed.q: #Node already has a well on it
+                        self.phyMed.q[__node]+=v
+                    else: #New well
+                        self.phyMed.q[__node]=v
         else: #Transient-state
             for k in range(len(self.phyMed.well_asBC)):
                 __l=((self.mesh.pointMatrix[self.phyMed.well_asBC[k][1]][0]-self.mesh.pointMatrix[self.phyMed.well_asBC[k][0]][0])**2+\
@@ -862,9 +928,22 @@ class fem:
                         if j*self.phyMed.dt>=__v[i][1]:
                             t_max=j+1
                             break
-                    for t in range(t_min,t_max):
-                        self.phyMed.q[self.phyMed.well_asBC[k][0]][t]-=__v[i][2]*__l*uF/(2*self.config['aq_thickness'])
-                        self.phyMed.q[self.phyMed.well_asBC[k][1]][t]-=__v[i][2]*__l*uF/(2*self.config['aq_thickness'])
+                    for j in range(2):
+                        __node=self.phyMed.well_asBC[k][j]
+                        offset=0
+                        #Check if the node already exists in the 'q' array
+                        if __node in self.phyMed.q: #Node already has a well on it
+                            offset=self.phyMed.q[__node][0] #Get current number of stress periods
+                            self.phyMed.q[__node][0]+=__n #Add number of stress periods to the current counter
+                            for i in range(__n):
+                                self.phyMed.q[__node][1].append(0) #Add placeholders to store the new stress periods
+                        else: #New well
+                            self.phyMed.q[__node]=[__n,[0]*__n]
+                        v=-__v[i][2]*__l*uF/\
+                        (2*self.config['aq_thickness'])
+                        self.phyMed.q[__node][1][i+offset][0]=t_min #Start of stress period 'i'
+                        self.phyMed.q[__node][1][i+offset][1]=t_max #End of stress period 'i'
+                        self.phyMed.q[__node][1][i+offset][2]=v #Pumping rate of stress period 'i'
     ##ADD WELLS################################################################
     
     #ZONE RELATED FUNCTIONS####################################################
