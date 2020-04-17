@@ -56,13 +56,13 @@ class mesh:
         self.nNodes=int(__f.readline().rstrip('\n')) #Read number of nodes.
         #######################################################################
         ###Create an array ('Point Matrix') for storing the node coordinates###
-        self.pointMatrix=[] #The 'Point Matrix' has dimensions of 'nNodes x 3'.
+        self.pointMatrix=[0]*self.nNodes #The 'Point Matrix' has dimensions of 'nNodes x 3'.
         #This allow us to store up to three coordinates per node.
         #######################################################################
         ###Retrieve node coordinates from the mesh file########################
         for i in range(self.nNodes):
             __aux_n=__f.readline().split()[1:] #Store the line in an auxiliar array. Skip node number.
-            self.pointMatrix.append([float(x) for x in __aux_n])
+            self.pointMatrix[i]=[float(x) for x in __aux_n]
         #######################################################################
         ##READ NODES INFO######################################################
         
@@ -418,38 +418,41 @@ class phymed:
         for i in range(2):
             __f.readline() #Skip 2 lines
         __n=int(__f.readline().rstrip('\n')) #Read number of Dirichlet nodes
+        self.bc_d=[0]*__n
         ##READ DIRICHLET BC's FROM FILE########################################
         for i in range(__n):
             __aux=__f.readline().rstrip('\n').split(',') #Read and split at ','
-            self.bc_d.append([int(__aux[0]),float(__aux[1])]) #Append to 'bc_d'
+            self.bc_d[i]=[int(__aux[0]),float(__aux[1])]
         #######################################################################
         #######################################################################
         
         #NEUMANN BC's##########################################################
         __f.readline() #Skip 1 line
         __n=int(__f.readline().rstrip('\n')) #Read number of Neumann faces
+        self.bc_n=[0]*__n
         ##READ NEUMANN BC's FROM FILE##########################################
         for i in range(__n):
             __aux=__f.readline().rstrip('\n').split(',')
-            self.bc_n.append([int(__aux[0]),int(__aux[1]),float(__aux[2])])
+            self.bc_n[i]=[int(__aux[0]),int(__aux[1]),float(__aux[2])]
         #######################################################################
         #######################################################################
         
         #WELL AS NEUMANN BC's##################################################
         __f.readline() #Skip 1 line
         __n=int(__f.readline().rstrip('\n')) #No. of nodes on the BC
+        self.well_asBC=[0]*__n
         if self.steady==True: #Steady-state
             for i in range(__n):
                 __aux=__f.readline().rstrip('\n').split(',')
-                self.well_asBC.append([int(__aux[0]),int(__aux[1]),float(__aux[3])])
+                self.well_asBC[i]=[int(__aux[0]),int(__aux[1]),float(__aux[3])]
         else: #Transient-state
             for i in range(__n):
                 __aux=__f.readline().rstrip('\n').split(',')
                 #__aux[2] has the number of pumping intervals
-                __v=list()
+                __v=[0]*__aux
                 for j in range(int(__aux[2])):
-                    __v.append([float(__aux[3+j*3]),float(__aux[4+j*3]),float(__aux[5+j*3])])
-                self.well_asBC.append([int(__aux[0]),int(__aux[1]),int(__aux[2]),__v])
+                    __v[i]=[float(__aux[3+j*3]),float(__aux[4+j*3]),float(__aux[5+j*3])]
+                self.well_asBC[i]=[int(__aux[0]),int(__aux[1]),int(__aux[2]),__v]
         #WELL AS NEUMANN BC's##################################################
         
         __f.close()
